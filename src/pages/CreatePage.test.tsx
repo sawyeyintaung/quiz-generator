@@ -35,12 +35,13 @@ describe('creating a quiz', () => {
   it('validates pasted notes and warns when asking for too many questions', async () => {
     const user = userEvent.setup()
     renderAt('/')
-    await user.click(screen.getByRole('button', { name: 'Paste notes' }))
+    await user.click(screen.getByRole('button', { name: 'Notes' }))
     await user.type(screen.getByLabelText('Paste your notes or study text'), 'Too short.')
     await user.click(screen.getByRole('button', { name: /Generate quiz/ }))
     expect(screen.getByRole('alert')).toHaveTextContent('Paste at least 30 words')
 
-    await user.type(screen.getByLabelText('Paste your notes or study text'), ' word'.repeat(80))
+    await user.click(screen.getByLabelText('Paste your notes or study text'))
+    await user.paste(' word'.repeat(80))
     expect(screen.getByText(/We recommend up to 1 question/)).toBeInTheDocument()
   })
 

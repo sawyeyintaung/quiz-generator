@@ -1,3 +1,5 @@
+<p><img src="public/logo.svg" width="64" height="64" alt="Quiz Generator logo: four answer tiles, one lit amber"></p>
+
 # quiz-generator
 
 Turn anything you're studying into an animated quiz with AI. Runs entirely in the browser:
@@ -21,6 +23,7 @@ no account and no backend.
   streaks, confetti, full keyboard support (1–4 / T / F / Enter), and reduced-motion support.
 - **History** in your browser (IndexedDB), with best and last scores, Retry missed,
   Export/Import backup.
+- **Light and dark mode:** a switch in the header, plus System / Light / Dark under Settings.
 - **Sharing** as a link (the quiz lives after the `#`, so it is never sent to a server) or as
   a `.quiz.json` file. Friends can play without an API key.
 

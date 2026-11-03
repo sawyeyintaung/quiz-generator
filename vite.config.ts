@@ -51,6 +51,11 @@ export default defineConfig({
   // Relative base + hash routing lets the build run on any static host or sub-path.
   base: './',
   plugins: [react(), tailwindcss(), securityPlugin()],
+  build: {
+    // Never inline fonts as data: URLs; the Content Security Policy only allows font files
+    // from our own origin.
+    assetsInlineLimit: (file) => (/\.(woff2?|ttf|otf)$/.test(file) ? false : undefined),
+  },
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],

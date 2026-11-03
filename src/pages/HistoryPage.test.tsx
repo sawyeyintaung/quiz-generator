@@ -37,7 +37,7 @@ describe('history and sharing', () => {
     })
     await user.upload(await screen.findByLabelText('Import a quiz or history file'), file)
     expect(await screen.findByText('Imported “Planets 101”.')).toBeInTheDocument()
-    const card = (await screen.findByRole('heading', { name: /Planets 101/ })).closest('li')!
+    const card = (await screen.findByRole('heading', { name: /^Planets 101/ })).closest('li')!
     expect(within(card).getByText('Imported')).toBeInTheDocument()
     expect(within(card).getByText('Not played yet')).toBeInTheDocument()
 
@@ -78,7 +78,7 @@ describe('history and sharing', () => {
     await user.keyboard('{Escape}')
 
     await user.click(within(screen.getByText(/Saved to/)).getByRole('link', { name: 'History' }))
-    const card = (await screen.findByRole('heading', { name: /Planets 101/ })).closest('li')!
+    const card = (await screen.findByRole('heading', { name: /^Planets 101/ })).closest('li')!
     expect(within(card).getByText('Best 1/2 (50%)')).toBeInTheDocument()
     expect(within(card).getByRole('button', { name: 'Retry missed (1)' })).toBeInTheDocument()
   })

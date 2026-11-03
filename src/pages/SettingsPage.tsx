@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { setThemePreference, useTheme } from '../lib/theme.ts'
 import { useId, useState } from 'react'
 import { createAiClient } from '../features/ai/createClient.ts'
 import { toAiError } from '../features/ai/errors.ts'
@@ -24,6 +25,7 @@ const fetchedModels: Partial<Record<ProviderId, ModelOption[]>> = {}
 export function SettingsPage() {
   useDocumentTitle('Settings')
   const settings = useSettings()
+  const { preference: themePreference } = useTheme()
   const provider = providers[settings.provider]
   const savedKey = settings.keys[settings.provider] ?? ''
   const [draftKey, setDraftKey] = useState(savedKey)
@@ -276,6 +278,42 @@ export function SettingsPage() {
           </div>
         </>
       )}
+
+      <fieldset className="border-border bg-surface mt-6 rounded-2xl border p-5 sm:p-6">
+        <legend className="sr-only">Appearance</legend>
+        <h2 className="font-semibold" aria-hidden>
+          Appearance
+        </h2>
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {(
+            [
+              ['system', 'System', 'Match your device'],
+              ['light', 'Light', 'Always light'],
+              ['dark', 'Dark', 'Always dark'],
+            ] as const
+          ).map(([value, label, hint]) => (
+            <label
+              key={value}
+              className={`cursor-pointer rounded-xl border-2 px-3 py-2.5 text-sm transition-colors ${
+                themePreference === value
+                  ? 'border-brand bg-brand/5'
+                  : 'border-border hover:border-brand/50'
+              }`}
+            >
+              <input
+                type="radio"
+                name="theme"
+                value={value}
+                checked={themePreference === value}
+                onChange={() => setThemePreference(value)}
+                className="sr-only"
+              />
+              <span className="block font-semibold">{label}</span>
+              <span className="text-muted block text-xs">{hint}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
       <div className="border-border bg-surface mt-6 rounded-2xl border p-5 sm:p-6">
         <h2 className="font-semibold">Privacy</h2>

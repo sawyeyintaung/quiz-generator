@@ -63,7 +63,7 @@ export const AnswerOption = forwardRef<HTMLButtonElement, Props>(function Answer
         animate={feedbackAnimation[status]}
         whileHover={disabled ? undefined : { y: -2 }}
         whileTap={disabled ? undefined : { scale: 0.98 }}
-        className={`flex w-full items-center gap-3 rounded-xl border-2 px-4 py-3 text-left font-medium transition-colors disabled:cursor-default ${statusClass[status]}`}
+        className={`flex min-h-16 w-full items-center gap-3 rounded-2xl border-2 px-4 py-3 text-left text-base font-semibold transition-colors disabled:cursor-default ${statusClass[status]}`}
       >
         <span
           aria-hidden

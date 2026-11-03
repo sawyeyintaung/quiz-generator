@@ -53,7 +53,7 @@ describe('Create page sources and focus suggestions', () => {
     const user = userEvent.setup()
     renderAt('/')
 
-    await user.click(screen.getByRole('button', { name: 'Upload file' }))
+    await user.click(screen.getByRole('button', { name: 'File' }))
     const md = `# Cell structure\n${words(200, 'membrane')}\n# Mitosis\n${words(200, 'prophase')}`
     await user.upload(
       screen.getByLabelText('Upload a PDF, Word or text file'),

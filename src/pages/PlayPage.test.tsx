@@ -64,6 +64,6 @@ describe('playing a quiz', () => {
     expect(
       await screen.findByRole('heading', { name: demoQuiz.questions[0].prompt }),
     ).toBeInTheDocument()
-    expect(screen.getByText(/Question 1 of 1/)).toBeInTheDocument()
+    expect(screen.getByText(/Question 1 of 1 ·/)).toBeInTheDocument()
   })
 })

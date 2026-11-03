@@ -166,6 +166,8 @@ type SessionProps = {
   note?: string
 }
 
+const difficultyLabel = { easy: 'Easy', medium: 'Medium', hard: 'Hard' } as const
+
 function PlaySession({ quiz, questions, complete, total = questions.length, note }: SessionProps) {
   const navigate = useNavigate()
   useDocumentTitle(quiz.title)
@@ -195,8 +197,16 @@ function PlaySession({ quiz, questions, complete, total = questions.length, note
     <section>
       <PlayHeader
         title={quiz.title}
-        answered={state.answers.length}
-        total={Math.max(total, questions.length)}
+        subtitle={`${
+          question
+            ? `Question ${state.index + 1} of ${Math.max(total, questions.length)}`
+            : 'Writing the next question'
+        } · ${difficultyLabel[quiz.settings.difficulty]}`}
+        results={Array.from({ length: Math.max(total, questions.length) }, (_, i) => {
+          const q = questions[i]
+          return q ? state.answers.find((a) => a.questionId === q.id)?.correct : undefined
+        })}
+        current={state.index}
         score={score(state)}
         streak={state.streak}
       />

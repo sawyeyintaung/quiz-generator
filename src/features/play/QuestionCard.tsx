@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useRef } from 'react'
+import { ArrowRightIcon, CheckIcon, CloseIcon } from '../../components/icons.tsx'
 import { burstFrom } from '../../lib/celebrate.ts'
 import { correctAnswerText, type AnswerValue, type Question } from '../quiz/schema.ts'
 import type { RecordedAnswer } from '../quiz/session.ts'
@@ -86,19 +87,24 @@ export function QuestionCard({ question, number, total, answer, isLast, onAnswer
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -48 }}
       transition={{ duration: 0.28, ease: 'easeOut' }}
-      className="border-border bg-surface rounded-2xl border p-5 shadow-sm [grid-area:1/1] sm:p-7"
+      className="border-border bg-surface rounded-3xl border p-5 shadow-[0_1px_2px_rgb(23_23_42/0.04),0_12px_32px_rgb(23_23_42/0.06)] [grid-area:1/1] sm:p-9"
       aria-labelledby={`q-${question.id}`}
     >
-      <p className="text-muted text-xs font-semibold tracking-wide uppercase">
-        Question {number} of {total} ·{' '}
+      <p className="text-muted text-xs font-bold tracking-widest uppercase">
+        <span className="sr-only">
+          Question {number} of {total},{' '}
+        </span>
         {question.type === 'true_false' ? 'True or false' : 'Multiple choice'}
       </p>
-      <h2 id={`q-${question.id}`} className="mt-2 text-xl leading-snug font-semibold sm:text-2xl">
+      <h2
+        id={`q-${question.id}`}
+        className="font-display mt-3 text-2xl leading-snug font-extrabold tracking-tight sm:text-3xl"
+      >
         {question.prompt}
       </h2>
 
       <motion.ul
-        className={`mt-6 grid gap-3 ${question.type === 'true_false' ? 'sm:grid-cols-2' : ''}`}
+        className="mt-6 grid gap-3 sm:grid-cols-2"
         initial="hidden"
         animate="show"
         variants={{ show: { transition: { staggerChildren: 0.06, delayChildren: 0.1 } } }}
@@ -129,29 +135,67 @@ export function QuestionCard({ question, number, total, answer, isLast, onAnswer
               className="overflow-hidden"
             >
               <div
-                className={`mt-5 rounded-xl border-l-4 p-4 ${
-                  answer.correct ? 'border-correct bg-correct/10' : 'border-wrong bg-wrong/10'
+                className={`mt-6 flex gap-3.5 rounded-2xl p-4 sm:p-5 ${
+                  answer.correct ? 'bg-correct/10' : 'bg-wrong/10'
                 }`}
               >
-                <p className={`font-semibold ${answer.correct ? 'text-correct' : 'text-wrong'}`}>
-                  {answer.correct
-                    ? 'Correct!'
-                    : `Not quite. The answer is: ${correctAnswerText(question)}`}
-                </p>
-                <p className="text-text mt-1 text-sm leading-relaxed">{question.explanation}</p>
+                <span
+                  aria-hidden
+                  className={`grid size-9 shrink-0 place-items-center rounded-full text-white ${
+                    answer.correct ? 'bg-correct' : 'bg-wrong'
+                  }`}
+                >
+                  {answer.correct ? <CheckIcon size={18} /> : <CloseIcon size={18} />}
+                </span>
+                <div>
+                  <p className={`font-extrabold ${answer.correct ? 'text-correct' : 'text-wrong'}`}>
+                    {answer.correct
+                      ? 'Correct!'
+                      : `Not quite. The answer is: ${correctAnswerText(question)}`}
+                  </p>
+                  <p className="text-text mt-1 text-sm leading-relaxed sm:text-base">
+                    {question.explanation}
+                  </p>
+                </div>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      <div className="mt-6 flex min-h-11 items-center justify-between gap-3">
-        <p className="text-muted hidden text-xs sm:block">
-          {answer
-            ? 'Press Enter to continue'
-            : question.type === 'true_false'
-              ? 'Keys: T / F'
-              : 'Keys: 1–4'}
+      <div className="mt-6 flex min-h-13 items-center justify-between gap-3">
+        <p className="text-muted hidden text-sm sm:block">
+          {answer ? (
+            <>
+              Press{' '}
+              <kbd className="border-border bg-bg rounded-md border px-1.5 py-0.5 font-sans font-bold">
+                Enter
+              </kbd>{' '}
+              to continue
+            </>
+          ) : question.type === 'true_false' ? (
+            <>
+              Keys{' '}
+              <kbd className="border-border bg-bg rounded-md border px-1.5 py-0.5 font-sans font-bold">
+                T
+              </kbd>{' '}
+              /{' '}
+              <kbd className="border-border bg-bg rounded-md border px-1.5 py-0.5 font-sans font-bold">
+                F
+              </kbd>
+            </>
+          ) : (
+            <>
+              Keys{' '}
+              <kbd className="border-border bg-bg rounded-md border px-1.5 py-0.5 font-sans font-bold">
+                1
+              </kbd>
+              –
+              <kbd className="border-border bg-bg rounded-md border px-1.5 py-0.5 font-sans font-bold">
+                4
+              </kbd>
+            </>
+          )}
         </p>
         <AnimatePresence>
           {answer && (
@@ -163,9 +207,9 @@ export function QuestionCard({ question, number, total, answer, isLast, onAnswer
               animate={{ opacity: 1, scale: 1 }}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
-              className="bg-accent hover:bg-accent-strong ml-auto rounded-xl px-5 py-2.5 font-semibold text-white shadow-sm"
+              className="bg-accent hover:bg-accent-strong ml-auto flex h-13 w-full items-center justify-center gap-2 rounded-2xl px-6 font-bold text-white sm:w-auto"
             >
-              {isLast ? 'See results' : 'Next question'} →
+              {isLast ? 'See results' : 'Next question'} <ArrowRightIcon size={18} />
             </motion.button>
           )}
         </AnimatePresence>
