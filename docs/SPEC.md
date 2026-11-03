@@ -1,29 +1,33 @@
 # quiz-generator — v1 Spec
 
 ## Goal
+
 A web app where **self-learners** turn whatever they're studying into a quiz in seconds,
 then play it through a polished, animated quiz UI. No login: open the site, add your AI key,
 generate, play.
 
 ## Target user
+
 Self-learners quizzing themselves (students, people learning a new skill).
 Not in v1: teachers, classrooms, sharing, leaderboards.
 
 ## Architecture: fully client-side (no backend)
+
 The app is a static site. Everything runs in the user's browser:
 
-| Concern | How |
-|---|---|
-| AI generation | Browser calls the AI provider directly with the user's own key |
-| File parsing | In the browser (pdf.js for PDF, mammoth for DOCX, plain read for TXT/MD) |
-| URL source | Asked of the AI provider's own URL-fetch feature where supported; otherwise "paste the text instead" |
-| Quiz history | IndexedDB in the browser |
-| Hosting | Any static host (Vercel / Netlify / GitHub Pages) |
+| Concern       | How                                                                                                  |
+| ------------- | ---------------------------------------------------------------------------------------------------- |
+| AI generation | Browser calls the AI provider directly with the user's own key                                       |
+| File parsing  | In the browser (pdf.js for PDF, mammoth for DOCX, plain read for TXT/MD)                             |
+| URL source    | Asked of the AI provider's own URL-fetch feature where supported; otherwise "paste the text instead" |
+| Quiz history  | IndexedDB in the browser                                                                             |
+| Hosting       | Any static host (Vercel / Netlify / GitHub Pages)                                                    |
 
 Why: the API key never touches a server of ours, there is no server for anyone to abuse
 (no SSRF, no rate limiting needed), and hosting is free and simple.
 
 ## AI providers & API keys (bring your own key)
+
 - **Providers (v1):** Anthropic (Claude), OpenAI, Google (Gemini), behind one provider
   interface so more can be added later.
 - **Settings panel:** pick provider, paste key, pick model (fast/low-cost default per provider),
@@ -38,17 +42,19 @@ Why: the API key never touches a server of ours, there is no server for anyone t
   errors are mapped to clear, friendly messages.
 
 ## Inputs
-| Source | How it works |
-|---|---|
-| Topic prompt | Free text, e.g. "Photosynthesis, high-school level" |
-| Pasted text / notes | Textarea, capped (e.g. ~30k characters) |
-| File upload | PDF, DOCX, TXT/MD parsed in the browser; size-capped (e.g. 10 MB) |
-| URL | Provider-side fetch (Anthropic, Google) where available; otherwise a clear "paste the text instead" message |
+
+| Source              | How it works                                                                                                |
+| ------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Topic prompt        | Free text, e.g. "Photosynthesis, high-school level"                                                         |
+| Pasted text / notes | Textarea, capped (e.g. ~30k characters)                                                                     |
+| File upload         | PDF, DOCX, TXT/MD parsed in the browser; size-capped (e.g. 10 MB)                                           |
+| URL                 | Provider-side fetch (Anthropic, Google) where available; otherwise a clear "paste the text instead" message |
 
 Extracted text is trimmed to a token budget before being sent to the model, which also
 protects the user's spend.
 
 ## Narrowing the quiz scope
+
 - **"Focus on" field** (optional, ~150 chars, available for every source type), e.g.
   "only the light reactions" or "chapter 3". The model picks key concepts only within that
   focus; it is treated as subject matter, not as instructions.
@@ -76,12 +82,15 @@ protects the user's spend.
     `{ suggestions: { title: string; description: string; pageRange?: [number, number]; estimatedQuestions: number }[] }`
 
 ## Quiz settings
+
 - Number of questions: 5 / 10 / 15 / 20
 - Difficulty: Easy / Medium / Hard
 - Question types: Multiple choice, True/False (choose one or both)
 
 ## Prompting: the app owns the instructions
+
 Users provide only the **source** and the **settings**; they never write prompts.
+
 - All instructions (difficulty rubric, plan-then-write steps, duplicate rules, output schema)
   live in versioned prompt templates in the app, tunable per provider.
 - Source content is placed in a clearly delimited "source material" block and the model is told
@@ -91,6 +100,7 @@ Users provide only the **source** and the **settings**; they never write prompts
 - Prompts ship in the client bundle, so they are not secret; they contain no keys.
 
 ## Question quality: avoiding duplicates
+
 Duplicates usually happen when the requested count is larger than the number of distinct
 facts in the source. Three layers prevent it:
 
@@ -98,7 +108,7 @@ facts in the source. Three layers prevent it:
    (~1 per 60–80 words of source text). If the user picks more, show a warning such as
    "This text is short; we recommend up to 5 questions." They may continue anyway.
 2. **Plan, then write (during generation):**
-   - Step 1: the model lists up to N *distinct* key concepts from the source, and must not
+   - Step 1: the model lists up to N _distinct_ key concepts from the source, and must not
      pad or repeat concepts to reach N.
    - Step 2: one question per concept.
    - If fewer concepts exist than requested, generate fewer and tell the user
@@ -112,34 +122,51 @@ facts in the source. Three layers prevent it:
    "Regenerate question" uses the same avoid list.
 
 ## Question format (validated with Zod)
+
 ```ts
 type Question =
-  | { id: string; type: "multiple_choice"; prompt: string;
-      options: string[];        // exactly 4
-      correctIndex: number;     // 0–3
-      explanation: string }
-  | { id: string; type: "true_false"; prompt: string;
-      answer: boolean;
-      explanation: string };
+  | {
+      id: string
+      type: 'multiple_choice'
+      prompt: string
+      options: string[] // exactly 4
+      correctIndex: number // 0–3
+      explanation: string
+    }
+  | { id: string; type: 'true_false'; prompt: string; answer: boolean; explanation: string }
 
 type Quiz = {
-  id: string; title: string;
-  source: { kind: "topic" | "text" | "file" | "url"; label: string }; // label only, not the content
-  settings: { count: number; focus?: string; pageRange?: [number, number]; difficulty: "easy" | "medium" | "hard"; types: Question["type"][] };
-  provider: string; model: string;
-  questions: Question[]; createdAt: string;
-};
+  id: string
+  title: string
+  source: { kind: 'topic' | 'text' | 'file' | 'url'; label: string } // label only, not the content
+  settings: {
+    count: number
+    focus?: string
+    pageRange?: [number, number]
+    difficulty: 'easy' | 'medium' | 'hard'
+    types: Question['type'][]
+  }
+  provider: string
+  model: string
+  questions: Question[]
+  createdAt: string
+}
 
 type Attempt = {
-  id: string; quizId: string;
-  answers: { questionId: string; correct: boolean }[];
-  score: number; startedAt: string; finishedAt: string;
-};
+  id: string
+  quizId: string
+  answers: { questionId: string; correct: boolean }[]
+  score: number
+  startedAt: string
+  finishedAt: string
+}
 ```
+
 The AI is asked for structured JSON matching this schema. Any question that fails validation
 is regenerated or dropped, never rendered.
 
 ## Quiz history (browser storage)
+
 - **IndexedDB via Dexie** with `quizzes` and `attempts` tables. localStorage holds only small settings.
 - Call `navigator.storage.persist()` to reduce the chance the browser evicts data.
 - Store the quiz and a short source label only, **not** the original files or pasted text.
@@ -149,6 +176,7 @@ is regenerated or dropped, never rendered.
   is removed if site data is cleared, and Safari may clear it after 7 days without a visit.
 
 ## Sharing quizzes (no AI needed to replay)
+
 A generated quiz can be shared and played by anyone, without an API key and without
 calling the AI again.
 
@@ -165,8 +193,15 @@ calling the AI again.
     "title": "...",
     "source": { "kind": "topic", "label": "..." },
     "settings": { "count": 10, "difficulty": "medium", "types": ["multiple_choice"] },
-    "questions": [ { "type": "multiple_choice", "prompt": "...", "options": ["..."],
-                     "correctIndex": 2, "explanation": "..." } ],
+    "questions": [
+      {
+        "type": "multiple_choice",
+        "prompt": "...",
+        "options": ["..."],
+        "correctIndex": 2,
+        "explanation": "..."
+      }
+    ],
     "createdAt": "..."
   }
   ```
@@ -179,6 +214,7 @@ calling the AI again.
   answers would need a server (future teacher mode).
 
 ## User flow
+
 1. **Create**: choose a source tab (Topic / Paste / Upload / URL), pick settings, press Generate.
 2. **Generating**: questions stream in; the first question can be played as soon as it arrives.
 3. **Play**: one question at a time with animated feedback (see below).
@@ -187,6 +223,7 @@ calling the AI again.
 5. **History**: past quizzes and attempts (see above).
 
 ## Animation / UI (polished quiz UI)
+
 - Question cards slide or flip in; answer options stagger in
 - Correct: green pulse, checkmark, small confetti burst; streak counter ticks up
 - Wrong: gentle shake, the correct answer is highlighted, explanation slides down
@@ -196,6 +233,7 @@ calling the AI again.
 - Mobile-first layout
 
 ## Security (client-side)
+
 - Strict Content Security Policy: scripts only from our origin; `connect-src` limited to the
   supported provider API domains
 - All quiz text rendered as plain text (no `dangerouslySetInnerHTML`, no Markdown-to-HTML in v1)
@@ -204,24 +242,27 @@ calling the AI again.
   except provider URL fetch, the key is never in the prompt, and output is schema-validated
 
 ## Tech stack
-| Layer | Choice |
-|---|---|
-| Build / framework | Vite + React + TypeScript |
-| Routing | React Router |
-| Styling | Tailwind CSS |
-| Animation | Framer Motion + canvas-confetti |
-| AI | Vercel AI SDK provider packages (Anthropic, OpenAI, Google), called from the browser |
-| Validation | Zod |
-| Parsing | pdf.js (`pdfjs-dist`), `mammoth` |
-| Storage | Dexie (IndexedDB) for history; local/sessionStorage for settings and key |
-| Testing | Vitest + React Testing Library; Playwright for a few end-to-end flows |
-| Hosting | Static host (Vercel / Netlify / GitHub Pages) |
+
+| Layer             | Choice                                                                               |
+| ----------------- | ------------------------------------------------------------------------------------ |
+| Build / framework | Vite + React + TypeScript                                                            |
+| Routing           | React Router                                                                         |
+| Styling           | Tailwind CSS                                                                         |
+| Animation         | Framer Motion + canvas-confetti                                                      |
+| AI                | Vercel AI SDK provider packages (Anthropic, OpenAI, Google), called from the browser |
+| Validation        | Zod                                                                                  |
+| Parsing           | pdf.js (`pdfjs-dist`), `mammoth`                                                     |
+| Storage           | Dexie (IndexedDB) for history; local/sessionStorage for settings and key             |
+| Testing           | Vitest + React Testing Library; Playwright for a few end-to-end flows                |
+| Hosting           | Static host (Vercel / Netlify / GitHub Pages)                                        |
 
 ## Out of scope for v1
+
 Accounts, cloud sync, server-hosted share links, teacher mode / hidden answers, other question types (fill-in, ordering,
 matching), AI-generated visuals, multiplayer, any backend server.
 
 ## Milestones
+
 1. Scaffold Vite + React + TS + Tailwind + lint/format + tests; app shell with routes; static deploy
 2. Play + Results screens with full animations, using the built-in demo quiz
 3. API-key settings + generation from topic and pasted text (streaming, validated)
