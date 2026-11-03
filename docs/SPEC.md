@@ -90,6 +90,36 @@ is regenerated or dropped, never rendered.
 - Known limits, shown in a short note on the History screen: data is per browser/device,
   is removed if site data is cleared, and Safari may clear it after 7 days without a visit.
 
+## Sharing quizzes (no AI needed to replay)
+A generated quiz can be shared and played by anyone, without an API key and without
+calling the AI again.
+
+- **Quiz file:** "Download quiz" saves `<title>.quiz.json`; "Import quiz" (button or
+  drag-and-drop) opens one. Works for any size.
+- **Share link:** the quiz is compressed with `lz-string` into the URL fragment
+  (`/#/play?q=...`). The fragment is never sent to any server. If the link would be too long
+  (over ~8 KB), the app suggests the file instead.
+- **Shared format** (versioned, separate from the internal storage format):
+  ```json
+  {
+    "format": "quiz-generator",
+    "version": 1,
+    "title": "...",
+    "source": { "kind": "topic", "label": "..." },
+    "settings": { "count": 10, "difficulty": "medium", "types": ["multiple_choice"] },
+    "questions": [ { "type": "multiple_choice", "prompt": "...", "options": ["..."],
+                     "correctIndex": 2, "explanation": "..." } ],
+    "createdAt": "..."
+  }
+  ```
+  Never includes the API key, provider/model, or original source text.
+  `format` + `version` allow future changes while still opening old files.
+- **Imports are untrusted:** validated with Zod, size-capped (e.g. 1 MB, max 100 questions),
+  rendered as plain text only; invalid files show a friendly error.
+- Imported quizzes are saved to History like generated ones (marked "Imported").
+- Trade-off: answers are readable inside the file/link. Fine for self-learners; hiding
+  answers would need a server (future teacher mode).
+
 ## User flow
 1. **Create**: choose a source tab (Topic / Paste / Upload / URL), pick settings, press Generate.
 2. **Generating**: questions stream in; the first question can be played as soon as it arrives.
@@ -130,13 +160,13 @@ is regenerated or dropped, never rendered.
 | Hosting | Static host (Vercel / Netlify / GitHub Pages) |
 
 ## Out of scope for v1
-Accounts, cloud sync, sharing/links, teacher mode, other question types (fill-in, ordering,
+Accounts, cloud sync, server-hosted share links, teacher mode / hidden answers, other question types (fill-in, ordering,
 matching), AI-generated visuals, multiplayer, any backend server.
 
 ## Milestones
 1. Scaffold Vite + React + TS + Tailwind + lint/format + tests; app shell with routes; static deploy
 2. Play + Results screens with full animations, using the built-in demo quiz
 3. API-key settings + generation from topic and pasted text (streaming, validated)
-4. History in IndexedDB + Export/Import
+4. History in IndexedDB + Export/Import + quiz sharing (file and link)
 5. File upload (PDF/DOCX/TXT) + URL via provider fetch
 6. Error states, CSP, accessibility and polish pass
