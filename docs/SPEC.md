@@ -56,7 +56,18 @@ protects the user's spend.
   pages are extracted and sent (saves the user's tokens).
 - If the focus is missing or thin in the source, generate fewer questions and say why
   ("Only 3 questions found about 'light reactions' in this document").
-- Later (not v1): section picker based on headings in DOCX / URL / pasted text.
+- **Focus suggestions** (helps when the scope is big):
+  - Offered when the source is large (e.g. >20 PDF pages or >5,000 words) or the topic is
+    broad: "This is a big topic. Want suggestions to narrow it down?" Never called
+    automatically, since it spends the user's tokens. A "Suggest focus" button is always available.
+  - Shows 4–8 options, each with a title, page range (PDF), and estimated number of unique
+    questions, plus a "Whole source (overview)" option. Multi-select allowed.
+  - Selecting fills the Focus field and page range; the user can still edit them.
+  - For topic sources, suggestions are subtopics (e.g. World War II → Causes, Pacific War, ...).
+  - **Free first:** use the PDF outline/bookmarks or document/page headings when present (no AI call).
+    Otherwise send a condensed view (headings + section openings / samples) to the fast model.
+  - Output uses a small Zod-validated schema:
+    `{ suggestions: { title: string; description: string; pageRange?: [number, number]; estimatedQuestions: number }[] }`
 
 ## Quiz settings
 - Number of questions: 5 / 10 / 15 / 20
