@@ -41,6 +41,23 @@ type Quiz = { id: string; title: string; source: SourceMeta; questions: Question
 The AI is asked for structured JSON matching this schema. Any question that fails validation
 is regenerated or dropped, never rendered.
 
+## AI providers & API keys (bring your own key)
+Users supply **their own API key**; the app has no key of its own and pays for no generation.
+
+- **Providers (v1):** Anthropic (Claude), OpenAI, Google (Gemini). The list is built so
+  more can be added (e.g. OpenRouter, Mistral) without UI changes.
+- **Settings panel:** pick provider, paste key, pick model (sensible default per provider,
+  cheap/fast model preselected), "Test key" button.
+- **Key storage:** kept in the browser only. Default is session-only (sessionStorage);
+  an opt-in "Remember on this device" uses localStorage. A "Forget key" button clears it.
+- **Key transport:** sent over HTTPS in a request header to our generate route, which calls
+  the provider and discards the key. Never stored, logged, or included in error reports/analytics
+  on the server.
+- **First run:** if no key is set, the Create screen shows a short "Add your API key" step
+  with links to each provider's key page; a built-in **demo quiz** can be played without a key.
+- **Errors:** invalid key, quota exhausted, rate-limited and model-unavailable errors from
+  any provider are mapped to clear, friendly messages.
+
 ## User flow
 1. **Create**: choose a source tab (Topic / Paste / Upload / URL), pick settings, press Generate.
 2. **Generating**: questions stream in; the first question can be played as soon as it arrives.
@@ -64,17 +81,17 @@ is regenerated or dropped, never rendered.
 | Framework | Next.js (App Router) + TypeScript |
 | Styling | Tailwind CSS |
 | Animation | Framer Motion + canvas-confetti |
-| AI | Anthropic Claude API (server-side only), structured JSON output |
+| AI | Vercel AI SDK (one interface for Anthropic, OpenAI, Google) with structured JSON output; user's own key |
 | Validation | Zod |
 | Parsing | `unpdf` (PDF), `mammoth` (DOCX), `@mozilla/readability` + `jsdom` (URL) |
 | Storage | None on the server in v1; browser localStorage for history |
 | Deploy | Vercel |
 
 ## Cost & abuse controls
-- Default to a fast, low-cost Claude model for generation; the model is set by an env var
-- The API key lives only on the server (`ANTHROPIC_API_KEY`), never in the browser
-- Per-IP rate limit on the generate endpoint
-- Caps on input size, question count and output tokens
+- Generation is paid by the user's own key, so the app has no per-quiz AI cost
+- Default model per provider is a fast, low-cost one; show a rough "tokens per quiz" hint
+- Light per-IP rate limit on file-upload and URL-fetch routes (these use our server resources)
+- Caps on input size, question count and output tokens (protects the user's key spend too)
 
 ## Out of scope for v1
 Accounts, sharing/links, teacher mode, other question types (fill-in, ordering, matching),
@@ -82,7 +99,7 @@ AI-generated visuals, multiplayer, a server database.
 
 ## Milestones
 1. Scaffold Next.js + Tailwind + lint/format; deploy a hello-world
-2. Generation API: topic + pasted text → validated quiz (streaming)
+2. API-key settings (provider/key/model) + generation API: topic + pasted text → validated quiz (streaming)
 3. Play screen + results with full animations
 4. File upload + URL sources
 5. History (localStorage), rate limiting, error states, polish & accessibility pass
