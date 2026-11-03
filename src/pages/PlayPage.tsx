@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { useEffect, useReducer } from 'react'
+import { useEffect, useMemo, useReducer, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import {
   GeneratingCard,
@@ -16,6 +16,8 @@ import {
   useJob,
 } from '../features/generate/generationStore.ts'
 import { providers } from '../features/ai/providers.ts'
+import { newId } from '../lib/id.ts'
+import { decodeQuizFromLink, ShareError } from '../features/share/shareFormat.ts'
 import { demoQuiz } from '../features/quiz/demoQuiz.ts'
 import { readPlayState, type ResultsState } from '../features/quiz/navigation.ts'
 import type { Question, Quiz } from '../features/quiz/schema.ts'
@@ -45,6 +47,8 @@ export function PlayPage() {
     )
   }
   if (jobId) return <GeneratedPlay key={jobId} jobId={jobId} />
+  const shared = searchParams.get('q')
+  if (shared) return <SharedPlay key={shared} param={shared} />
   if (searchParams.has('demo')) {
     return (
       <PlaySession key={location.key} quiz={demoQuiz} questions={demoQuiz.questions} complete />
@@ -67,6 +71,30 @@ export function PlayPage() {
         </Link>
       </div>
     </section>
+  )
+}
+
+function SharedPlay({ param }: { param: string }) {
+  const result = useMemo(() => {
+    try {
+      return { quiz: decodeQuizFromLink(param) }
+    } catch (error) {
+      return {
+        error: error instanceof ShareError ? error.message : 'This quiz link could not be opened.',
+      }
+    }
+  }, [param])
+
+  if (!result.quiz) {
+    return <GenerationFailed title="Couldn't open this quiz" message={result.error ?? ''} />
+  }
+  return (
+    <PlaySession
+      quiz={result.quiz}
+      questions={result.quiz.questions}
+      complete
+      note="Shared quiz: it runs entirely in your browser."
+    />
   )
 }
 
@@ -140,6 +168,8 @@ type SessionProps = {
 function PlaySession({ quiz, questions, complete, total = questions.length, note }: SessionProps) {
   const navigate = useNavigate()
   const [state, dispatch] = useReducer(sessionReducer, undefined, createSession)
+  // One id per run, so saving the attempt is idempotent (reloads, double effects).
+  const [attemptId] = useState(newId)
   const question = questions[state.index]
   const answer = answerFor(state, question)
   const isLast = complete && state.index === questions.length - 1
@@ -154,9 +184,10 @@ function PlaySession({ quiz, questions, complete, total = questions.length, note
       answers: state.answers,
       bestStreak: state.bestStreak,
       note,
+      attemptId,
     }
     navigate('/results', { state: results, replace: true })
-  }, [outOfQuestions, quiz, questions, state.answers, state.bestStreak, note, navigate])
+  }, [outOfQuestions, quiz, questions, state.answers, state.bestStreak, note, attemptId, navigate])
 
   return (
     <section>

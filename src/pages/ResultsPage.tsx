@@ -1,10 +1,12 @@
 import { motion } from 'framer-motion'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { ScoreRing } from '../features/results/ScoreRing.tsx'
 import { readResultsState, type PlayState } from '../features/quiz/navigation.ts'
 import { answerText, correctAnswerText } from '../features/quiz/schema.ts'
 import { celebrate } from '../lib/celebrate.ts'
+import { originOf, saveAttempt, saveQuiz } from '../features/history/db.ts'
+import { ShareDialog } from '../features/share/ShareDialog.tsx'
 
 function headline(pct: number): string {
   if (pct === 100) return 'Perfect score!'
@@ -18,10 +20,32 @@ export function ResultsPage() {
   const navigate = useNavigate()
   const results = readResultsState(location.state)
   const celebrated = useRef(false)
+  const [sharing, setSharing] = useState(false)
+  const [saved, setSaved] = useState(false)
 
   const total = results?.questionIds.length ?? 0
   const correct = results?.answers.filter((a) => a.correct).length ?? 0
   const pct = total > 0 ? correct / total : 0
+
+  // Save the quiz and this attempt to History (idempotent: same attempt id on reload).
+  useEffect(() => {
+    if (!results?.attemptId || !originOf(results.quiz)) return
+    const { quiz, answers, questionIds, bestStreak, attemptId } = results
+    void (async () => {
+      await saveQuiz(quiz)
+      await saveAttempt({
+        id: attemptId,
+        quizId: quiz.id,
+        questionIds,
+        answers,
+        correct: answers.filter((a) => a.correct).length,
+        total: questionIds.length,
+        bestStreak,
+        finishedAt: new Date().toISOString(),
+      })
+      setSaved(true)
+    })().catch(() => undefined) // storage unavailable: results still show, just not saved
+  }, [results])
 
   useEffect(() => {
     if (!results || celebrated.current) return
@@ -109,6 +133,13 @@ export function ResultsPage() {
           >
             Retry all
           </button>
+          <button
+            type="button"
+            onClick={() => setSharing(true)}
+            className="border-border hover:border-brand rounded-xl border-2 px-5 py-2.5 font-semibold"
+          >
+            Share
+          </button>
           <Link
             to="/"
             className="border-border hover:border-brand rounded-xl border-2 px-5 py-2.5 font-semibold"
@@ -116,7 +147,17 @@ export function ResultsPage() {
             New quiz
           </Link>
         </div>
+        {saved && (
+          <p className="text-muted mt-4 text-xs" role="status">
+            Saved to{' '}
+            <Link to="/history" className="text-brand underline">
+              History
+            </Link>{' '}
+            in this browser.
+          </p>
+        )}
       </motion.div>
+      <ShareDialog quiz={sharing ? quiz : undefined} onClose={() => setSharing(false)} />
 
       {missed.length > 0 && (
         <div className="mt-10">

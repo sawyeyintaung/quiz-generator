@@ -17,6 +17,8 @@ export type ResultsState = {
   bestStreak: number
   /** e.g. why fewer questions were made than requested. */
   note?: string
+  /** Stable id for this run, used to save the attempt once. */
+  attemptId?: string
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

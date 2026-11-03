@@ -6,6 +6,8 @@ import { parsePastedReply } from '../features/generate/pasteImport.ts'
 import { sourceLabel } from '../features/generate/source.ts'
 import type { GenerationRequest } from '../features/generate/types.ts'
 import { CopyButton } from '../features/paste/CopyButton.tsx'
+import { saveQuiz } from '../features/history/db.ts'
+import { newId } from '../lib/id.ts'
 import type { PlayState } from '../features/quiz/navigation.ts'
 import type { Quiz } from '../features/quiz/schema.ts'
 
@@ -83,10 +85,7 @@ function PasteFlow({ request }: { request: GenerationRequest }) {
     ].filter(Boolean)
 
     const quiz: Quiz = {
-      id:
-        typeof crypto !== 'undefined' && 'randomUUID' in crypto
-          ? crypto.randomUUID()
-          : `${Date.now()}`,
+      id: newId(),
       title:
         result.title ??
         (request.source.kind === 'topic' ? request.source.text.slice(0, 60) : 'My quiz'),
@@ -102,6 +101,7 @@ function PasteFlow({ request }: { request: GenerationRequest }) {
       questions: result.questions,
       createdAt: new Date().toISOString(),
     }
+    void saveQuiz(quiz, 'pasted').catch(() => undefined)
     const playState: PlayState = { quiz, note: notes.join(' ') || undefined }
     navigate('/play', { state: playState })
   }

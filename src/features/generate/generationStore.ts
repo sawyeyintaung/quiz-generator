@@ -3,6 +3,8 @@ import { createAiClient } from '../ai/createClient.ts'
 import { toAiError, type AiErrorKind } from '../ai/errors.ts'
 import type { AiClient, ProviderId } from '../ai/types.ts'
 import type { Question, Quiz } from '../quiz/schema.ts'
+import { newId } from '../../lib/id.ts'
+import { saveQuiz } from '../history/db.ts'
 import { generateQuiz } from './generateQuiz.ts'
 import { PROMPT_VERSION } from './prompts.ts'
 import { sourceLabel } from './source.ts'
@@ -46,12 +48,6 @@ function update(id: string, patch: Partial<GenerationJob>) {
   listeners.forEach((l) => l())
 }
 
-function newId(): string {
-  return typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
-}
-
 export function startGeneration(request: GenerationRequest, credentials: Credentials): string {
   const id = newId()
   const controller = new AbortController()
@@ -88,6 +84,9 @@ async function run(
         update(id, { questions: [...job.questions, event.question] })
       } else {
         update(id, { status: 'done', note: event.note })
+        const finished = jobs.get(id)
+        // Save as soon as it is complete, so it survives a reload even if never finished.
+        if (finished) void saveQuiz(jobToQuiz(finished)).catch(() => undefined)
       }
     }
   } catch (error) {
