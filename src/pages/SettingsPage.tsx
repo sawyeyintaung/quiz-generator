@@ -3,8 +3,8 @@ import { setThemePreference, useTheme } from '../lib/theme.ts'
 import { useId, useState } from 'react'
 import { createAiClient } from '../features/ai/createClient.ts'
 import { toAiError } from '../features/ai/errors.ts'
+import { setCachedModels, useModelOptions } from '../features/ai/modelCatalog.ts'
 import { pickDefaultModel, providerIds, providers } from '../features/ai/providers.ts'
-import type { ModelOption, ProviderId } from '../features/ai/types.ts'
 import {
   forgetAllKeys,
   setApiKey,
@@ -19,9 +19,6 @@ type TestState =
   | { status: 'ok'; count: number }
   | { status: 'error'; message: string }
 
-// Model lists fetched with the user's key, kept for this page session.
-const fetchedModels: Partial<Record<ProviderId, ModelOption[]>> = {}
-
 export function SettingsPage() {
   useDocumentTitle('Settings')
   const settings = useSettings()
@@ -32,7 +29,12 @@ export function SettingsPage() {
   const [draftFor, setDraftFor] = useState(settings.provider)
   const [showKey, setShowKey] = useState(false)
   const [test, setTest] = useState<TestState>({ status: 'idle' })
-  const [models, setModels] = useState<ModelOption[] | undefined>(fetchedModels[settings.provider])
+  // Settings fetches the list only on "Save & test key", so the test result is explicit.
+  const { options: modelOptions, loaded: modelsLoaded } = useModelOptions(
+    provider.id,
+    undefined,
+    settings.models[provider.id],
+  )
   const ids = { key: useId(), model: useId(), remember: useId() }
 
   // Switching provider: show that provider's saved key and model list.
@@ -40,10 +42,7 @@ export function SettingsPage() {
     setDraftFor(settings.provider)
     setDraftKey(savedKey)
     setTest({ status: 'idle' })
-    setModels(fetchedModels[settings.provider])
   }
-
-  const modelOptions = withCurrent(models ?? provider.fallbackModels, settings.models[provider.id])
 
   async function saveAndTest() {
     const key = draftKey.trim()
@@ -53,8 +52,7 @@ export function SettingsPage() {
     try {
       const client = await createAiClient(provider.id, key, settings.models[provider.id])
       const list = await client.listModels()
-      fetchedModels[provider.id] = list
-      setModels(list)
+      setCachedModels(provider.id, list)
       if (list.length > 0 && !list.some((m) => m.id === settings.models[provider.id])) {
         const model = pickDefaultModel(provider.id, list)
         if (model) updateSettings((s) => ({ models: { ...s.models, [provider.id]: model } }))
@@ -240,7 +238,7 @@ export function SettingsPage() {
               </label>
               <p className="text-muted mt-1 text-sm">
                 A fast, low-cost model is selected by default.{' '}
-                {!models && 'Test your key to see every model you can use.'}
+                {!modelsLoaded && 'Test your key to see every model you can use.'}
               </p>
               <select
                 id={ids.model}
@@ -351,11 +349,4 @@ export function SettingsPage() {
       </div>
     </motion.section>
   )
-}
-
-/** Make sure the selected model is always one of the options. */
-function withCurrent(options: ModelOption[], current: string): ModelOption[] {
-  return options.some((m) => m.id === current)
-    ? options
-    : [{ id: current, label: current }, ...options]
 }

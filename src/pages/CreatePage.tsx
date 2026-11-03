@@ -10,6 +10,7 @@ import {
   UploadIcon,
 } from '../components/icons.tsx'
 import { FileSource } from '../features/create/FileSource.tsx'
+import { ModelPicker } from '../features/create/ModelPicker.tsx'
 import { SegmentedControl } from '../features/create/SegmentedControl.tsx'
 import { isWebUrl } from '../features/ai/fetchPrompt.ts'
 import { FocusSuggestions } from '../features/focus/FocusSuggestions.tsx'
@@ -17,7 +18,6 @@ import type { FocusInput, FocusSuggestion } from '../features/focus/suggest.ts'
 import { useFocusSuggestions } from '../features/focus/useFocusSuggestions.ts'
 import { textForRange } from '../features/sources/readFile.ts'
 import { MAX_FILE_TEXT_CHARS } from '../features/sources/types.ts'
-import { providers } from '../features/ai/providers.ts'
 import { startGeneration } from '../features/generate/generationStore.ts'
 import {
   MAX_FOCUS_CHARS,
@@ -496,18 +496,26 @@ export function CreatePage() {
                 {difficulties.find((d) => d.id === draft.difficulty)?.label} ·{' '}
                 {typeSummary(draft.types)}
               </p>
-              <p className="mt-0.5 text-sm opacity-80">
-                {pasteMode ? (
-                  <>Copy &amp; paste with your subscription · </>
-                ) : credentials ? (
-                  <>
-                    {providers[credentials.provider].name} · {credentials.model} ·{' '}
-                  </>
-                ) : (
-                  <>No API key yet · </>
+              <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm">
+                <span className="opacity-80">
+                  {pasteMode
+                    ? 'Copy & paste with your subscription'
+                    : credentials
+                      ? null
+                      : 'No API key yet'}
+                </span>
+                {!pasteMode && credentials && (
+                  <ModelPicker
+                    provider={credentials.provider}
+                    apiKey={credentials.apiKey}
+                    model={credentials.model}
+                  />
                 )}
-                <Link to="/settings" className="underline">
-                  {credentials || pasteMode ? 'Change' : 'Add one'}
+                <span className="hidden opacity-80 sm:inline" aria-hidden>
+                  ·
+                </span>
+                <Link to="/settings" className="underline opacity-80 hover:opacity-100">
+                  {pasteMode ? 'Change' : credentials ? 'Provider & key' : 'Add one'}
                 </Link>
               </p>
             </div>
