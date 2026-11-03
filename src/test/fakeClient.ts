@@ -5,23 +5,36 @@ type Script = {
   /** One entry per streamText call: chunks to yield, optionally ending in an error. */
   streams: (string[] | { chunks: string[]; error: Error })[]
   models?: { id: string; label: string }[]
+  /** If set, the client can read web pages and returns this text (or throws it). */
+  page?: string | Error
+  /** Replies for extra generateJson calls (e.g. focus suggestions), used in order. */
+  jsonReplies?: unknown[]
 }
 
 /** A scripted AiClient for tests. Records the prompts it receives. */
 export function fakeClient(script: Script) {
-  const calls: { json: JsonRequest<unknown>[]; stream: CompletionRequest[] } = {
+  const calls: { json: JsonRequest<unknown>[]; stream: CompletionRequest[]; urls: string[] } = {
     json: [],
     stream: [],
+    urls: [],
   }
   let streamIndex = 0
   const client: AiClient = {
+    ...(script.page !== undefined && {
+      async fetchUrlText(url: string) {
+        calls.urls.push(url)
+        if (script.page instanceof Error) throw script.page
+        return script.page as string
+      },
+    }),
     async listModels() {
       return script.models ?? []
     },
     async generateJson<T>(req: JsonRequest<T>) {
       calls.json.push(req as JsonRequest<unknown>)
-      if (script.plan instanceof Error) throw script.plan
-      return req.schema.parse(script.plan)
+      const reply = script.jsonReplies?.length ? script.jsonReplies.shift() : script.plan
+      if (reply instanceof Error) throw reply
+      return req.schema.parse(reply)
     },
     async *streamText(req: CompletionRequest) {
       calls.stream.push(req)

@@ -34,6 +34,11 @@ export interface AiClient {
   generateJson<T>(request: JsonRequest<T>): Promise<T>
   /** Streams the text of one response, chunk by chunk. */
   streamText(request: CompletionRequest): AsyncIterable<string>
+  /**
+   * Has the provider fetch a web page and return its main content as plain text.
+   * Undefined when the provider cannot read web pages.
+   */
+  fetchUrlText?(url: string, signal?: AbortSignal): Promise<string>
 }
 
 export type AiClientFactory = (apiKey: string, model: string) => AiClient

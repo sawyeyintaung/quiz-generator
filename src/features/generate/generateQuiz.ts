@@ -34,6 +34,18 @@ export async function* generateQuiz(
   req: GenerationRequest,
   { signal, random = Math.random }: Options = {},
 ): AsyncGenerator<GenerationEvent> {
+  // 0. Web pages: the provider fetches the page; we then quiz on its text.
+  if (req.source.kind === 'url') {
+    if (!client.fetchUrlText) throw new AiError('url_unsupported')
+    let text: string
+    try {
+      text = await client.fetchUrlText(req.source.url, signal)
+    } catch (error) {
+      throw toAiError(error)
+    }
+    req = { ...req, source: { kind: 'text', text, label: req.source.url } }
+  }
+
   // 1. Plan
   let plan: z.infer<typeof planSchema>
   try {

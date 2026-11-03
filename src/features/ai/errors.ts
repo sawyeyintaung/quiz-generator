@@ -9,6 +9,8 @@ export type AiErrorKind =
   | 'truncated'
   | 'invalid_output'
   | 'empty_source'
+  | 'url_unsupported'
+  | 'url_failed'
   | 'aborted'
   | 'unknown'
 
@@ -27,6 +29,10 @@ const messages: Record<AiErrorKind, string> = {
   invalid_output: 'The AI returned something we could not read. Please try again.',
   empty_source:
     "We couldn't find anything to write questions about. Try a broader topic, more text, or a different focus.",
+  url_unsupported:
+    "This AI provider can't read web pages. Switch to Claude or Gemini in Settings, or copy the page text and use Paste notes.",
+  url_failed:
+    "The AI couldn't read that web page (it may need a login, block bots, or not exist). Copy the page text and use Paste notes instead.",
   aborted: 'Generation was cancelled.',
   unknown: 'Something went wrong while talking to the AI provider.',
 }

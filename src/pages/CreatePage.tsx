@@ -1,7 +1,14 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { useId, useState, type FormEvent } from 'react'
+import { useId, useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
+import { FileSource } from '../features/create/FileSource.tsx'
 import { SegmentedControl } from '../features/create/SegmentedControl.tsx'
+import { isWebUrl } from '../features/ai/fetchPrompt.ts'
+import { FocusSuggestions } from '../features/focus/FocusSuggestions.tsx'
+import type { FocusInput, FocusSuggestion } from '../features/focus/suggest.ts'
+import { useFocusSuggestions } from '../features/focus/useFocusSuggestions.ts'
+import { textForRange } from '../features/sources/readFile.ts'
+import { MAX_FILE_TEXT_CHARS } from '../features/sources/types.ts'
 import { providers } from '../features/ai/providers.ts'
 import { startGeneration } from '../features/generate/generationStore.ts'
 import {
@@ -28,11 +35,11 @@ import {
 } from '../features/settings/settingsStore.ts'
 import type { PastePageState } from './PastePage.tsx'
 
-const tabs: { id: SourceTab; label: string; soon?: boolean }[] = [
+const tabs: { id: SourceTab; label: string }[] = [
   { id: 'topic', label: 'Topic' },
   { id: 'text', label: 'Paste notes' },
-  { id: 'file', label: 'Upload file', soon: true },
-  { id: 'url', label: 'Link', soon: true },
+  { id: 'file', label: 'Upload file' },
+  { id: 'url', label: 'Link' },
 ]
 
 export function CreatePage() {
@@ -42,23 +49,92 @@ export function CreatePage() {
   const pasteMode = settings.mode === 'paste'
   const [draft, setDraftState] = useState<Draft>(getDraft)
   const [submitted, setSubmitted] = useState(false)
-  const ids = { topic: useId(), text: useId(), focus: useId() }
+  const ids = { topic: useId(), text: useId(), focus: useId(), url: useId() }
 
   function setDraft(patch: Partial<Draft>) {
     setDraftState((d) => saveDraft({ ...d, ...patch }))
   }
 
-  const words = wordCount(draft.text)
-  const recommended = recommendedMaxQuestions(draft.text)
+  // The text a quiz would be written from, for each kind of source.
+  const selectedFileText = draft.file ? textForRange(draft.file, draft.pageRange) : ''
+  const bodyText = draft.tab === 'text' ? draft.text : draft.tab === 'file' ? selectedFileText : ''
+  const words = wordCount(bodyText)
+  const recommended = recommendedMaxQuestions(bodyText)
+  const fileTooLong = draft.tab === 'file' && selectedFileText.length > MAX_FILE_TEXT_CHARS
+  const urlUnsupported = draft.tab === 'url' && !pasteMode && credentials?.provider === 'openai'
+
   const sourceError =
     draft.tab === 'topic'
       ? draft.topic.trim().length < 2
         ? 'Enter a topic to quiz yourself on.'
         : undefined
-      : words < MIN_TEXT_WORDS
-        ? `Paste at least ${MIN_TEXT_WORDS} words of notes (you have ${words}).`
-        : undefined
-  const tooMany = draft.tab === 'text' && words >= MIN_TEXT_WORDS && draft.count > recommended
+      : draft.tab === 'text'
+        ? words < MIN_TEXT_WORDS
+          ? `Paste at least ${MIN_TEXT_WORDS} words of notes (you have ${words}).`
+          : undefined
+        : draft.tab === 'file'
+          ? !draft.file
+            ? 'Choose a file to quiz yourself on.'
+            : words < MIN_TEXT_WORDS
+              ? `The selected part has only ${words} words. Choose more pages or another file.`
+              : undefined
+          : !isWebUrl(draft.url)
+            ? 'Enter a web address starting with https://'
+            : urlUnsupported
+              ? "GPT can't read web pages. Switch to Claude or Gemini in Settings, or paste the page text."
+              : undefined
+  const tooMany =
+    (draft.tab === 'text' || draft.tab === 'file') &&
+    words >= MIN_TEXT_WORDS &&
+    draft.count > recommended
+
+  // Focus-area suggestions for the current source.
+  const focusInput = useMemo<FocusInput | undefined>(() => {
+    if (draft.tab === 'topic') return { kind: 'topic', topic: draft.topic }
+    if (draft.tab === 'text') return { kind: 'text', text: draft.text }
+    if (draft.tab === 'file' && draft.file) return { kind: 'file', file: draft.file }
+    return undefined
+  }, [draft.tab, draft.topic, draft.text, draft.file])
+  const focusKey =
+    draft.tab === 'topic'
+      ? `topic:${draft.topic.trim().toLowerCase()}`
+      : draft.tab === 'text'
+        ? `text:${draft.text.length}:${draft.text.slice(0, 200)}`
+        : draft.tab === 'file' && draft.file
+          ? `file:${draft.file.name}:${draft.file.text.length}`
+          : 'none'
+  const suggestions = useFocusSuggestions(focusInput, focusKey, {
+    credentials: pasteMode ? undefined : credentials,
+    auto: settings.autoSuggest,
+  })
+
+  function togglePick(s: FocusSuggestion) {
+    const options = suggestions.state.status === 'ready' ? suggestions.state.suggestions : []
+    const picks = draft.focusPicks.includes(s.title)
+      ? draft.focusPicks.filter((t) => t !== s.title)
+      : [...draft.focusPicks, s.title]
+    const picked = options.filter((o) => picks.includes(o.title))
+    const ranges = picked.map((o) => o.pageRange).filter((r): r is [number, number] => Boolean(r))
+    setDraft({
+      focusPicks: picks,
+      focus: picks.join('; ').slice(0, MAX_FOCUS_CHARS),
+      // For PDFs, read only the pages the picked parts cover.
+      pageRange:
+        draft.tab === 'file' && ranges.length > 0 && ranges.length === picked.length
+          ? [Math.min(...ranges.map((r) => r[0])), Math.max(...ranges.map((r) => r[1]))]
+          : picks.length === 0
+            ? undefined
+            : draft.pageRange,
+    })
+  }
+
+  function clearPicks() {
+    setDraft({
+      focusPicks: [],
+      focus: '',
+      pageRange: draft.tab === 'file' ? undefined : draft.pageRange,
+    })
+  }
 
   function toggleType(type: QuestionType) {
     const has = draft.types.includes(type)
@@ -70,11 +146,23 @@ export function CreatePage() {
     e.preventDefault()
     setSubmitted(true)
     if (sourceError) return
+    const range = draft.pageRange
+    const source: GenerationRequest['source'] =
+      draft.tab === 'topic'
+        ? { kind: 'topic', text: draft.topic.trim() }
+        : draft.tab === 'text'
+          ? { kind: 'text', text: draft.text.trim() }
+          : draft.tab === 'file' && draft.file
+            ? {
+                kind: 'file',
+                text: selectedFileText.slice(0, MAX_FILE_TEXT_CHARS).trim(),
+                label: range
+                  ? `${draft.file.name} (pages ${range[0]}–${range[1]})`
+                  : draft.file.name,
+              }
+            : { kind: 'url', url: draft.url.trim() }
     const request: GenerationRequest = {
-      source:
-        draft.tab === 'topic'
-          ? { kind: 'topic', text: draft.topic.trim() }
-          : { kind: 'text', text: draft.text.trim() },
+      source,
       focus: draft.focus.trim() || undefined,
       count: draft.count,
       difficulty: draft.difficulty,
@@ -101,7 +189,8 @@ export function CreatePage() {
     >
       <h1 className="text-3xl font-bold tracking-tight">Create a quiz</h1>
       <p className="text-muted mt-2">
-        Add a topic or your notes, pick your settings, and start answering in seconds.
+        Add a topic, your notes, a file or a link, pick your settings, and start answering in
+        seconds.
       </p>
 
       {!credentials && !pasteMode && (
@@ -147,7 +236,6 @@ export function CreatePage() {
                 type="button"
                 role="tab"
                 aria-selected={active}
-                disabled={t.soon}
                 onClick={() => setDraft({ tab: t.id })}
                 className={`rounded-full border-2 px-4 py-1.5 text-sm font-medium transition-colors ${
                   active
@@ -156,7 +244,6 @@ export function CreatePage() {
                 }`}
               >
                 {t.label}
-                {t.soon && <span className="ml-1 text-xs">(soon)</span>}
               </button>
             )
           })}
@@ -171,13 +258,13 @@ export function CreatePage() {
               <input
                 id={ids.topic}
                 value={draft.topic}
-                onChange={(e) => setDraft({ topic: e.target.value })}
+                onChange={(e) => setDraft({ topic: e.target.value, focusPicks: [] })}
                 maxLength={MAX_TOPIC_CHARS}
                 placeholder="e.g. Photosynthesis, high-school level"
                 className="border-border bg-bg focus:border-brand mt-2 w-full rounded-xl border-2 px-3 py-2.5 outline-none"
               />
             </>
-          ) : (
+          ) : draft.tab === 'text' ? (
             <>
               <label htmlFor={ids.text} className="text-sm font-semibold">
                 Paste your notes or study text
@@ -185,7 +272,7 @@ export function CreatePage() {
               <textarea
                 id={ids.text}
                 value={draft.text}
-                onChange={(e) => setDraft({ text: e.target.value })}
+                onChange={(e) => setDraft({ text: e.target.value, focusPicks: [] })}
                 maxLength={MAX_TEXT_CHARS}
                 rows={8}
                 placeholder="Paste a chapter, lecture notes, an article…"
@@ -197,6 +284,54 @@ export function CreatePage() {
                   ` · enough for about ${recommended} unique question${recommended === 1 ? '' : 's'}`}
                 {draft.text.length >= MAX_TEXT_CHARS * 0.9 &&
                   ` · ${(MAX_TEXT_CHARS - draft.text.length).toLocaleString()} characters left`}
+              </p>
+            </>
+          ) : draft.tab === 'file' ? (
+            <>
+              <p className="mb-2 text-sm font-semibold">Upload your study material</p>
+              <FileSource
+                file={draft.file}
+                pageRange={draft.pageRange}
+                onFile={(file) =>
+                  setDraft({ file, pageRange: undefined, focusPicks: [], focus: '' })
+                }
+                onPageRange={(pageRange) => setDraft({ pageRange })}
+              />
+              {draft.file && words >= MIN_TEXT_WORDS && (
+                <p className="text-muted mt-1 text-xs">
+                  {draft.pageRange ? 'Selected pages: ' : ''}
+                  {words.toLocaleString()} words · enough for about {recommended} unique question
+                  {recommended === 1 ? '' : 's'}
+                </p>
+              )}
+              {fileTooLong && (
+                <p className="mt-2 rounded-xl bg-amber-400/15 px-4 py-3 text-sm" role="status">
+                  This is a lot of text. Only about the first{' '}
+                  {Math.round(MAX_FILE_TEXT_CHARS / 6).toLocaleString()} words will be used. Pick a
+                  focus area or page range to quiz on a specific part.
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <label htmlFor={ids.url} className="text-sm font-semibold">
+                Web page address
+              </label>
+              <input
+                id={ids.url}
+                type="url"
+                inputMode="url"
+                value={draft.url}
+                onChange={(e) => setDraft({ url: e.target.value })}
+                placeholder="https://en.wikipedia.org/wiki/Photosynthesis"
+                className="border-border bg-bg focus:border-brand mt-2 w-full rounded-xl border-2 px-3 py-2.5 outline-none"
+              />
+              <p className="text-muted mt-1 text-xs">
+                {pasteMode
+                  ? 'Your AI app will open the page. Pages that need a login may not work.'
+                  : urlUnsupported
+                    ? "GPT can't read web pages: use Claude or Gemini, or paste the page text instead."
+                    : 'Your AI provider opens and reads the page. Pages that need a login may not work.'}
               </p>
             </>
           )}
@@ -214,10 +349,17 @@ export function CreatePage() {
           <input
             id={ids.focus}
             value={draft.focus}
-            onChange={(e) => setDraft({ focus: e.target.value })}
+            onChange={(e) => setDraft({ focus: e.target.value, focusPicks: [] })}
             maxLength={MAX_FOCUS_CHARS}
             placeholder="e.g. only the light reactions"
             className="border-border bg-bg focus:border-brand mt-2 w-full rounded-xl border-2 px-3 py-2.5 outline-none"
+          />
+          <FocusSuggestions
+            state={suggestions.state}
+            picks={draft.focusPicks}
+            onToggle={togglePick}
+            onClear={clearPicks}
+            onRequest={suggestions.request}
           />
         </div>
 

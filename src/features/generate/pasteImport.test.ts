@@ -55,3 +55,12 @@ describe('pastePrompt', () => {
     expect(prompt).toContain('"type": "true_false"')
   })
 })
+
+describe('pastePrompt for a web page', () => {
+  it('lets the AI app fetch only that page', () => {
+    const prompt = pastePrompt({ ...req, source: { kind: 'url', url: 'https://example.com/a' } })
+    expect(prompt).toContain('<source type="web page">\nhttps://example.com/a\n</source>')
+    expect(prompt).toContain('The only tool you may use is fetching that one web page.')
+    expect(prompt).not.toContain('do not run any tools')
+  })
+})

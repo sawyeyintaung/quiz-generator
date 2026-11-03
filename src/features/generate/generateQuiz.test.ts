@@ -121,3 +121,29 @@ describe('generateQuiz', () => {
     expect(error).toMatchObject({ kind: 'auth' })
   })
 })
+
+describe('generateQuiz with a web page', () => {
+  const urlReq: GenerationRequest = {
+    ...request,
+    source: { kind: 'url', url: 'https://example.com/volcanoes' },
+  }
+
+  it('has the provider read the page, then quizzes on its text', async () => {
+    const { client, calls } = fakeClient({
+      plan,
+      streams: [[`${q1}\n${q2}\n${q3}`]],
+      page: '# Volcanoes\nMagma and lava.',
+    })
+    const { questions } = await collect(generateQuiz(client, urlReq))
+    expect(calls.urls).toEqual(['https://example.com/volcanoes'])
+    expect(calls.json[0].prompt).toContain('<source type="study material">\n# Volcanoes')
+    expect(questions).toHaveLength(3)
+  })
+
+  it('explains when the provider cannot read web pages', async () => {
+    const { client } = fakeClient({ plan, streams: [] })
+    await expect(collect(generateQuiz(client, urlReq))).rejects.toMatchObject({
+      kind: 'url_unsupported',
+    })
+  })
+})

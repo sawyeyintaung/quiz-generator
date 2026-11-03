@@ -273,6 +273,21 @@ calling the AI again.
 | Testing           | Vitest + React Testing Library; Playwright for a few end-to-end flows                                                                            |
 | Hosting           | Static host (Vercel / Netlify / GitHub Pages)                                                                                                    |
 
+## Implementation notes (Milestone 5)
+
+- Files are read only in the browser: PDF via pdf.js (text per page + bookmarks), DOCX via
+  mammoth (headings kept as `# ` lines), TXT/Markdown directly. Scanned PDFs without text,
+  password-protected PDFs and files over 10 MB get a clear message. At most ~100k characters
+  are sent; longer selections show a visible warning suggesting a page range or focus.
+- Links: API mode asks the provider to fetch the page once (Claude: server-side `web_fetch`
+  tool limited to the page's own domain, with `pause_turn` resumed; Gemini: URL context tool),
+  then quizzes on the returned text. OpenAI's chat API cannot read pages, so the app says so
+  and suggests Claude/Gemini or pasting the text. Paste mode asks the learner's AI app to
+  fetch the page.
+- Focus suggestions come from the document's own bookmarks/headings when it has them (free,
+  with page ranges for PDFs); otherwise from one cached AI call on a condensed view of the
+  source (API mode only). Links get no suggestions before the page is fetched.
+
 ## Out of scope for v1
 
 Accounts, cloud sync, server-hosted share links, teacher mode / hidden answers, other question types (fill-in, ordering,

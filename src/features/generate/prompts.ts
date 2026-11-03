@@ -20,9 +20,18 @@ function escapeTags(text: string): string {
   return text.replace(/<\/?(source|focus)\b[^>]*>/gi, '')
 }
 
+const sourceType: Record<GenerationRequest['source']['kind'], string> = {
+  topic: 'topic',
+  text: 'study material',
+  file: 'study material',
+  url: 'web page',
+}
+
 function sourceBlock(req: GenerationRequest): string {
-  const kind = req.source.kind === 'topic' ? 'topic' : 'study material'
-  const parts = [`<source type="${kind}">\n${escapeTags(req.source.text.trim())}\n</source>`]
+  const body = req.source.kind === 'url' ? req.source.url : req.source.text
+  const parts = [
+    `<source type="${sourceType[req.source.kind]}">\n${escapeTags(body.trim())}\n</source>`,
+  ]
   if (req.focus?.trim()) parts.push(`<focus>${escapeTags(req.focus.trim())}</focus>`)
   return parts.join('\n')
 }
@@ -33,7 +42,11 @@ function sourceRules(req: GenerationRequest): string[] {
       ? [
           '- Use well-established facts about the topic, suited to the level the topic describes (assume a general learner if no level is given).',
         ]
-      : ['- Use only ideas stated in, or directly supported by, the study material.']
+      : req.source.kind === 'url'
+        ? [
+            '- Fetch and read the web page given in <source> with your web fetch or browsing tool, then use only ideas from that page. If you cannot open it, say so instead of guessing.',
+          ]
+        : ['- Use only ideas stated in, or directly supported by, the study material.']
   if (req.focus?.trim()) {
     rules.push(
       '- Only include concepts about the focus. If the source has nothing about the focus, return an empty list.',
@@ -123,7 +136,11 @@ ${typeGuidance(req.types)}
 
 ${QUESTION_RULES}
 
-Reply with only one JSON code block in exactly this shape, and nothing else. Do not create or edit files, and do not run any tools or commands.
+Reply with only one JSON code block in exactly this shape, and nothing else. ${
+    req.source.kind === 'url'
+      ? 'Do not create or edit files. The only tool you may use is fetching that one web page.'
+      : 'Do not create or edit files, and do not run any tools or commands.'
+  }
 
 \`\`\`json
 {"title": "short quiz title, at most 60 characters", "questions": [

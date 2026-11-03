@@ -15,6 +15,8 @@ export type Settings = {
   keys: Partial<Record<ProviderId, string>>
   /** Keep keys after the tab closes (localStorage instead of sessionStorage). */
   rememberKeys: boolean
+  /** Automatically ask the AI for focus-area suggestions (uses a little of the user's credit). */
+  autoSuggest: boolean
 }
 
 const PREFS_KEY = 'qg.settings.v1'
@@ -29,6 +31,7 @@ const defaultSettings: Settings = {
   >,
   keys: {},
   rememberKeys: false,
+  autoSuggest: true,
 }
 
 // Storage can be unavailable (private mode, blocked site data); never let that break the app.
@@ -80,6 +83,7 @@ function load(): Settings {
     provider: isProvider(prefs?.provider) ? prefs.provider : defaultSettings.provider,
     models,
     rememberKeys,
+    autoSuggest: prefs?.autoSuggest !== false,
     keys: cleanKeys(read(rememberKeys ? local : session, KEYS_KEY)),
   }
 }
@@ -90,6 +94,7 @@ function persist(s: Settings) {
     provider: s.provider,
     models: s.models,
     rememberKeys: s.rememberKeys,
+    autoSuggest: s.autoSuggest,
   })
   const hasKeys = Object.keys(s.keys).length > 0
   // Keys live in exactly one place, and never in localStorage unless the user opted in.

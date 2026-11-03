@@ -3,7 +3,7 @@ import { useId, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { pastePrompt, PROMPT_VERSION } from '../features/generate/prompts.ts'
 import { parsePastedReply } from '../features/generate/pasteImport.ts'
-import { sourceLabel } from '../features/generate/source.ts'
+import { requestLabel } from '../features/generate/source.ts'
 import type { GenerationRequest } from '../features/generate/types.ts'
 import { CopyButton } from '../features/paste/CopyButton.tsx'
 import { saveQuiz } from '../features/history/db.ts'
@@ -89,7 +89,7 @@ function PasteFlow({ request }: { request: GenerationRequest }) {
       title:
         result.title ??
         (request.source.kind === 'topic' ? request.source.text.slice(0, 60) : 'My quiz'),
-      source: { kind: request.source.kind, label: sourceLabel(request.source.text) },
+      source: { kind: request.source.kind, label: requestLabel(request.source) },
       settings: {
         count: request.count,
         focus: request.focus,

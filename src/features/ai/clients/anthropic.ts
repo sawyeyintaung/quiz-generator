@@ -1,7 +1,12 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { AiError, toAiError } from '../errors.ts'
+import { FETCH_FAILED, fetchPagePrompt } from '../fetchPrompt.ts'
 import type { AiClient, AiClientFactory, CompletionRequest, JsonRequest } from '../types.ts'
+
+// The dynamic-filtering web fetch tool needs these models; others use the basic version.
+const supportsDynamicFetch = (model: string) =>
+  /^claude-(opus-(5|4-[678])|sonnet-(5|4-6)|fable-5)/.test(model)
 
 // Claude 5-family models accept output_config.effort; older ones may reject it.
 const supportsEffort = (model: string) => /^claude-(haiku|sonnet|opus|fable)-5/.test(model)
@@ -54,6 +59,44 @@ export const createAnthropicClient: AiClientFactory = (apiKey, model): AiClient 
       const result = schema.safeParse(response.parsed_output)
       if (!result.success) throw new AiError('invalid_output', result.error.message)
       return result.data
+    },
+
+    async fetchUrlText(url, signal) {
+      const host = new URL(url).hostname
+      // Server-side fetch tool, limited to the page's own site.
+      const tool: Anthropic.ToolUnion = supportsDynamicFetch(model)
+        ? { type: 'web_fetch_20260209', name: 'web_fetch', max_uses: 3, allowed_domains: [host] }
+        : { type: 'web_fetch_20250910', name: 'web_fetch', max_uses: 3, allowed_domains: [host] }
+      const messages: Anthropic.MessageParam[] = [{ role: 'user', content: fetchPagePrompt(url) }]
+      try {
+        for (let i = 0; i < 3; i++) {
+          const response = await client.messages.create(
+            {
+              model,
+              max_tokens: 16_000,
+              messages,
+              tools: [tool],
+              ...(supportsEffort(model) ? { output_config: output } : {}),
+            },
+            { signal },
+          )
+          if (response.stop_reason === 'pause_turn') {
+            // The server paused its tool loop; send the turn back to let it continue.
+            messages.push({ role: 'assistant', content: response.content })
+            continue
+          }
+          checkStop(response)
+          const text = response.content
+            .map((b) => (b.type === 'text' ? b.text : ''))
+            .join('')
+            .trim()
+          if (!text || text.includes(FETCH_FAILED)) throw new AiError('url_failed')
+          return text
+        }
+        throw new AiError('url_failed')
+      } catch (error) {
+        throw toAiError(error)
+      }
     },
 
     async *streamText({ system, prompt, maxTokens, signal }: CompletionRequest) {

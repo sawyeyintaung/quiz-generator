@@ -7,7 +7,7 @@ import { newId } from '../../lib/id.ts'
 import { saveQuiz } from '../history/db.ts'
 import { generateQuiz } from './generateQuiz.ts'
 import { PROMPT_VERSION } from './prompts.ts'
-import { sourceLabel } from './source.ts'
+import { requestLabel } from './source.ts'
 import type { GenerationRequest } from './types.ts'
 
 export type JobStatus = 'planning' | 'writing' | 'done' | 'error' | 'cancelled'
@@ -127,13 +127,7 @@ export function jobToQuiz(job: GenerationJob): Quiz {
   return {
     id: job.id,
     title: job.title ?? 'My quiz',
-    source: {
-      kind: request.source.kind,
-      label:
-        request.source.kind === 'text' && request.source.label
-          ? request.source.label
-          : sourceLabel(request.source.text),
-    },
+    source: { kind: request.source.kind, label: requestLabel(request.source) },
     settings: {
       count: request.count,
       focus: request.focus?.trim() || undefined,

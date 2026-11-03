@@ -1,6 +1,7 @@
 import { FinishReason, GoogleGenAI } from '@google/genai'
 import { AiError, toAiError } from '../errors.ts'
 import { parseJsonAs } from '../json.ts'
+import { FETCH_FAILED, fetchPagePrompt } from '../fetchPrompt.ts'
 import type { AiClient, AiClientFactory, CompletionRequest, JsonRequest } from '../types.ts'
 
 function checkFinish(reason: FinishReason | undefined) {
@@ -49,6 +50,22 @@ export const createGoogleClient: AiClientFactory = (apiKey, model): AiClient => 
       }
       checkFinish(response.candidates?.[0]?.finishReason)
       return parseJsonAs(response.text ?? '', schema)
+    },
+
+    async fetchUrlText(url, signal) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: fetchPagePrompt(url),
+          config: { tools: [{ urlContext: {} }], maxOutputTokens: 16_000, abortSignal: signal },
+        })
+        checkFinish(response.candidates?.[0]?.finishReason)
+        const text = (response.text ?? '').trim()
+        if (!text || text.includes(FETCH_FAILED)) throw new AiError('url_failed')
+        return text
+      } catch (error) {
+        throw toAiError(error)
+      }
     },
 
     async *streamText({ system, prompt, maxTokens, signal }: CompletionRequest) {

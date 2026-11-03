@@ -255,6 +255,22 @@ export function SettingsPage() {
                 ))}
               </select>
             </div>
+
+            <label className="mt-6 flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={settings.autoSuggest}
+                onChange={(e) => updateSettings({ autoSuggest: e.target.checked })}
+                className="accent-brand mt-1 size-4"
+              />
+              <span className="text-sm">
+                <span className="font-medium">Auto-suggest focus areas</span>
+                <span className="text-muted block">
+                  Suggests parts of your topic or material to focus on. Uses a small amount of your
+                  API credit, once per source. When off, you can still ask for suggestions.
+                </span>
+              </span>
+            </label>
           </div>
         </>
       )}
