@@ -302,6 +302,23 @@ calling the AI again.
 - Error states: storage blocked (private windows) on History, "new version available" with
   Reload when an old tab can't load new code, plus the earlier provider/quota/link messages.
 
+## Questions left in a source
+
+- Every quiz belongs to a **source** saved in this browser (IndexedDB `sources`): the original
+  request including the topic, notes or extracted file text (links: the address only), the
+  concepts already quizzed, the questions already asked, and the AI's latest estimate of
+  distinct ideas (`totalIdeas`). Deleting a source's last quiz deletes the source. Backups
+  include sources.
+- API mode: the plan step returns `totalIdeas` and is given the covered concepts to skip; the
+  write step gets earlier questions as "don't repeat". An empty plan on a later batch means
+  the source is fully covered.
+- Copy & paste mode: the instructions ask for a concept label per question and `totalIdeas`,
+  and later batches list the covered concepts. An empty `questions` list means fully covered.
+- Results and History show "Covered X of about Y ideas · about Z left" and a
+  "Next N questions (no repeats)" button. For notes and files the app checks the AI's
+  estimate against its own (~1 idea per 70 words) and shows the smaller one if they
+  differ by more than 2×.
+
 ## Out of scope for v1
 
 Accounts, cloud sync, server-hosted share links, teacher mode / hidden answers, other question types (fill-in, ordering,

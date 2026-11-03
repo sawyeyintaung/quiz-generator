@@ -14,6 +14,7 @@ import {
 import type { PlayState } from '../features/quiz/navigation.ts'
 import type { Quiz } from '../features/quiz/schema.ts'
 import { ShareDialog } from '../features/share/ShareDialog.tsx'
+import { CoveragePanel } from '../features/coverage/CoveragePanel.tsx'
 import {
   downloadJson,
   MAX_SHARED_BYTES,
@@ -291,6 +292,8 @@ function HistoryCard({
           )}
         </div>
       </div>
+
+      <CoveragePanel sourceId={quiz.sourceId} compact />
 
       <div className="mt-4 flex flex-wrap gap-2 text-sm">
         <button

@@ -55,19 +55,36 @@ function sourceRules(req: GenerationRequest): string[] {
   return rules
 }
 
+/** Caps how much history goes into a prompt (the newest entries are kept). */
+const MAX_AVOID_CONCEPTS = 150
+export const MAX_AVOID_PROMPTS = 80
+
+/** For a next batch: the ideas earlier quizzes from this source already covered. */
+function coveredBlock(req: GenerationRequest): string {
+  const covered = req.avoid?.concepts.slice(-MAX_AVOID_CONCEPTS) ?? []
+  if (covered.length === 0) return ''
+  return `\nEarlier quizzes from this source already covered these ideas. Do not choose any of them again, or anything that tests the same fact:\n${covered
+    .map((c) => `- ${escapeTags(c)}`)
+    .join('\n')}\n`
+}
+
+const TOTAL_IDEAS_RULE =
+  '- totalIdeas: your estimate of how many distinct key ideas the whole source contains (only within the focus, if one is given), including any already covered. For a topic, the number a thorough course at that level would cover.'
+
 export function planPrompt(req: GenerationRequest): string {
   return `${sourceBlock(req)}
 
 Plan a quiz of up to ${req.count} questions at ${req.difficulty} difficulty. List the distinct key concepts it should test, one question per concept.
-
+${coveredBlock(req)}
 Rules:
 - Each concept must test a different fact or idea. Never list the same idea twice in different words.
 - Do not pad the list: if the source supports fewer than ${req.count} distinct concepts, list fewer.
 ${sourceRules(req).join('\n')}
-- If the source is not something a quiz can be written about, return an empty list.
+- If the source is not something a quiz can be written about, or every idea in it is already covered, return an empty list.
+${TOTAL_IDEAS_RULE}
 
 Respond with JSON only, in this shape:
-{"title": "short quiz title, at most 60 characters", "concepts": ["one short sentence describing each concept"]}`
+{"title": "short quiz title, at most 60 characters", "totalIdeas": 40, "concepts": ["one short sentence describing each concept"]}`
 }
 
 const typeNames: Record<QuestionType, string> = {
@@ -114,8 +131,9 @@ ${QUESTION_RULES}`
 }
 
 const MC_EXAMPLE =
-  '{"type": "multiple_choice", "prompt": "...", "options": ["...", "...", "...", "..."], "correctIndex": 0, "explanation": "..."}'
-const TF_EXAMPLE = '{"type": "true_false", "prompt": "...", "answer": true, "explanation": "..."}'
+  '{"concept": "short label, at most 6 words", "type": "multiple_choice", "prompt": "...", "options": ["...", "...", "...", "..."], "correctIndex": 0, "explanation": "..."}'
+const TF_EXAMPLE =
+  '{"concept": "short label, at most 6 words", "type": "true_false", "prompt": "...", "answer": true, "explanation": "..."}'
 
 /**
  * One self-contained prompt for copy & paste mode: the learner pastes it into
@@ -130,7 +148,7 @@ ${sourceBlock(req)}
 Create a quiz of up to ${req.count} questions at ${req.difficulty} difficulty.
 First, silently choose up to ${req.count} distinct key concepts. Each must test a different fact or idea. If the source supports fewer than ${req.count}, choose fewer: never pad the quiz or repeat an idea in different words.
 ${sourceRules(req).join('\n')}
-Then write one question per concept.
+${coveredBlock(req)}Then write one question per concept, and label each question with its concept.
 
 ${typeGuidance(req.types)}
 
@@ -142,8 +160,12 @@ Reply with only one JSON code block in exactly this shape, and nothing else. ${
       : 'Do not create or edit files, and do not run any tools or commands.'
   }
 
+Also report:
+${TOTAL_IDEAS_RULE}
+- If every idea in the source is already covered, reply with an empty "questions" list.
+
 \`\`\`json
-{"title": "short quiz title, at most 60 characters", "questions": [
+{"title": "short quiz title, at most 60 characters", "totalIdeas": 40, "questions": [
 ${examples.join(',\n')}
 ]}
 \`\`\``

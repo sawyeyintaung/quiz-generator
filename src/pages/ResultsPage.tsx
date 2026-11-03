@@ -7,6 +7,7 @@ import { answerText, correctAnswerText } from '../features/quiz/schema.ts'
 import { celebrate } from '../lib/celebrate.ts'
 import { originOf, saveAttempt, saveQuiz } from '../features/history/db.ts'
 import { ShareDialog } from '../features/share/ShareDialog.tsx'
+import { CoveragePanel } from '../features/coverage/CoveragePanel.tsx'
 import { useDocumentTitle } from '../lib/useDocumentTitle.ts'
 
 function headline(pct: number): string {
@@ -160,6 +161,7 @@ export function ResultsPage() {
         )}
       </motion.div>
       <ShareDialog quiz={sharing ? quiz : undefined} onClose={() => setSharing(false)} />
+      <CoveragePanel sourceId={quiz.sourceId} />
 
       {missed.length > 0 && (
         <div className="mt-10">

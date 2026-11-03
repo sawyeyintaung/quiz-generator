@@ -1,6 +1,7 @@
 import { Dexie, type EntityTable } from 'dexie'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { z } from 'zod'
+import type { GenerationRequest } from '../generate/types.ts'
 import { quizSchema, type AnswerValue, type Quiz } from '../quiz/schema.ts'
 
 /** How a quiz got into this browser. */
@@ -19,15 +20,42 @@ export type Attempt = {
   finishedAt: string
 }
 
+/**
+ * A source (topic, notes, file text or link) kept so later quizzes can continue from it
+ * without repeating ideas. Stored only in this browser.
+ */
+export type StoredSource = {
+  id: string
+  /** The original request minus the per-batch fields. Holds the notes/file text itself. */
+  request: Omit<GenerationRequest, 'sourceId' | 'avoid'>
+  label: string
+  /** Short labels of the ideas already quizzed. */
+  covered: string[]
+  /** Questions already asked (sent as "don't repeat these"). */
+  prompts: string[]
+  /** The AI's latest estimate of distinct ideas in the whole source (or focus). */
+  totalIdeas?: number
+  /** True once the AI reports nothing new is left. */
+  exhausted: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 class HistoryDb extends Dexie {
   quizzes!: EntityTable<StoredQuiz, 'id'>
   attempts!: EntityTable<Attempt, 'id'>
+  sources!: EntityTable<StoredSource, 'id'>
 
   constructor() {
     super('quiz-generator')
     this.version(1).stores({
       quizzes: 'id, savedAt',
       attempts: 'id, quizId, finishedAt',
+    })
+    this.version(2).stores({
+      quizzes: 'id, savedAt',
+      attempts: 'id, quizId, finishedAt',
+      sources: 'id, updatedAt',
     })
   }
 }
@@ -71,10 +99,15 @@ export async function saveAttempt(attempt: Attempt) {
   await db.attempts.put(attempt)
 }
 
+/** Deletes a quiz and its scores, and its saved source text once no other quiz uses it. */
 export async function deleteQuiz(id: string) {
-  await db.transaction('rw', db.quizzes, db.attempts, async () => {
+  await db.transaction('rw', db.quizzes, db.attempts, db.sources, async () => {
+    const sourceId = (await db.quizzes.get(id))?.sourceId
     await db.attempts.where('quizId').equals(id).delete()
     await db.quizzes.delete(id)
+    if (sourceId && (await db.quizzes.filter((q) => q.sourceId === sourceId).count()) === 0) {
+      await db.sources.delete(sourceId)
+    }
   })
 }
 
@@ -145,18 +178,39 @@ const backupSchema = z.object({
     }),
   ),
   attempts: z.array(attemptSchema),
+  // Added later: older backups have no sources.
+  sources: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(100),
+        request: z.looseObject({}),
+        label: z.string().max(500),
+        covered: z.array(z.string().max(500)).max(1000),
+        prompts: z.array(z.string().max(2000)).max(1000),
+        totalIdeas: z.number().int().nonnegative().optional(),
+        exhausted: z.boolean(),
+        createdAt: z.string().max(40),
+        updatedAt: z.string().max(40),
+      }),
+    )
+    .optional(),
 })
 
 export type HistoryBackup = z.infer<typeof backupSchema>
 
 export async function exportHistory(): Promise<HistoryBackup> {
-  const [quizzes, attempts] = await Promise.all([db.quizzes.toArray(), db.attempts.toArray()])
+  const [quizzes, attempts, sources] = await Promise.all([
+    db.quizzes.toArray(),
+    db.attempts.toArray(),
+    db.sources.toArray(),
+  ])
   return {
     format: 'quiz-generator-history',
     version: 1,
     exportedAt: new Date().toISOString(),
     quizzes,
     attempts,
+    sources,
   }
 }
 
@@ -172,11 +226,59 @@ export function isHistoryBackup(value: unknown): boolean {
 export async function importHistory(value: unknown): Promise<number> {
   const result = backupSchema.safeParse(value)
   if (!result.success) throw new Error('This history backup is damaged or from an unknown version.')
-  const { quizzes, attempts } = result.data
-  await db.transaction('rw', db.quizzes, db.attempts, async () => {
+  const { quizzes, attempts, sources = [] } = result.data
+  await db.transaction('rw', db.quizzes, db.attempts, db.sources, async () => {
     await db.quizzes.bulkPut(quizzes)
     await db.attempts.bulkPut(attempts)
+    await db.sources.bulkPut(sources as StoredSource[])
   })
   void requestPersistence()
   return quizzes.length
+}
+
+// ---- Sources: "questions left" and the next batch ----
+
+const MAX_REMEMBERED = 400
+
+/**
+ * Records what a finished batch covered. Creates the source on its first quiz.
+ * `exhausted` means the AI reported that nothing new was left.
+ */
+export async function recordCoverage(
+  request: GenerationRequest,
+  label: string,
+  batch: { concepts: string[]; prompts: string[]; totalIdeas?: number; exhausted?: boolean },
+) {
+  if (!request.sourceId) return
+  const id = request.sourceId
+  await db.transaction('rw', db.sources, async () => {
+    const existing = await db.sources.get(id)
+    const now = new Date().toISOString()
+    const merge = (a: string[], b: string[]) =>
+      [...new Set([...a, ...b.map((x) => x.trim()).filter(Boolean)])].slice(-MAX_REMEMBERED)
+    // Keep the original request (with the notes/file text), minus the per-batch fields.
+    const stored: StoredSource['request'] = {
+      source: request.source,
+      focus: request.focus,
+      count: request.count,
+      difficulty: request.difficulty,
+      types: request.types,
+    }
+    await db.sources.put({
+      id,
+      request: existing?.request ?? stored,
+      label: existing?.label ?? label,
+      covered: merge(existing?.covered ?? [], batch.concepts),
+      prompts: merge(existing?.prompts ?? [], batch.prompts),
+      totalIdeas: batch.totalIdeas ?? existing?.totalIdeas,
+      exhausted: Boolean(batch.exhausted),
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    })
+  })
+  void requestPersistence()
+}
+
+export function useSource(id: string | undefined): StoredSource | null | undefined {
+  return useLiveQuery(() => (id ? db.sources.get(id).then((s) => s ?? null) : null), [id])
 }

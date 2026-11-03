@@ -147,3 +147,40 @@ describe('generateQuiz with a web page', () => {
     })
   })
 })
+
+describe('generateQuiz across batches', () => {
+  it('reports the total and the concept of each question', async () => {
+    const { client } = fakeClient({
+      plan: { ...plan, totalIdeas: 25 },
+      streams: [[`${q1}\n${q2}\n${q3}`]],
+    })
+    const { events } = await collect(generateQuiz(client, request))
+    expect(events[0]).toMatchObject({ type: 'planned', totalIdeas: 25 })
+    expect(
+      events.filter((e) => e.type === 'question').map((e) => e.type === 'question' && e.concept),
+    ).toEqual(['Closest planet', 'Largest planet', 'Pluto status'])
+  })
+
+  it('tells the AI what earlier batches covered', async () => {
+    const { client, calls } = fakeClient({ plan, streams: [[`${q1}\n${q2}\n${q3}`]] })
+    const next = {
+      ...request,
+      avoid: { concepts: ['Saturn rings'], prompts: ['Which planet has rings?'] },
+    }
+    await collect(generateQuiz(client, next))
+    expect(calls.json[0].prompt).toContain('already covered these ideas')
+    expect(calls.json[0].prompt).toContain('- Saturn rings')
+    expect(calls.stream[0].prompt).toContain('- Which planet has rings?')
+  })
+
+  it('says the source is fully covered when nothing new is left', async () => {
+    const { client } = fakeClient({
+      plan: { title: 'x', totalIdeas: 3, concepts: [] },
+      streams: [],
+    })
+    const next = { ...request, avoid: { concepts: ['a', 'b', 'c'], prompts: [] } }
+    await expect(collect(generateQuiz(client, next))).rejects.toMatchObject({
+      kind: 'source_exhausted',
+    })
+  })
+})

@@ -6,7 +6,7 @@ import { parsePastedReply } from '../features/generate/pasteImport.ts'
 import { requestLabel } from '../features/generate/source.ts'
 import type { GenerationRequest } from '../features/generate/types.ts'
 import { CopyButton } from '../features/paste/CopyButton.tsx'
-import { saveQuiz } from '../features/history/db.ts'
+import { recordCoverage, saveQuiz } from '../features/history/db.ts'
 import { newId } from '../lib/id.ts'
 import type { PlayState } from '../features/quiz/navigation.ts'
 import type { Quiz } from '../features/quiz/schema.ts'
@@ -56,6 +56,8 @@ export function PastePage() {
 function PasteFlow({ request }: { request: GenerationRequest }) {
   const navigate = useNavigate()
   const prompt = useMemo(() => pastePrompt(request), [request])
+  // Every quiz belongs to a saved source, so later batches can continue without repeats.
+  const [sourceId] = useState(() => request.sourceId ?? newId())
   const [target, setTarget] = useState<Target>('claude')
   const selectedApp = aiApps.find((a) => a.id === target) ?? aiApps[0]
   const [reply, setReply] = useState('')
@@ -74,6 +76,20 @@ function PasteFlow({ request }: { request: GenerationRequest }) {
 
   function startQuiz() {
     const result = parsePastedReply(reply, request)
+    const continuing = Boolean(request.avoid?.concepts.length)
+    // A next batch where the AI reports nothing new is left: the source is fully covered.
+    if (result.questions.length === 0 && continuing && result.totalIdeas !== undefined) {
+      void recordCoverage({ ...request, sourceId }, requestLabel(request.source), {
+        concepts: [],
+        prompts: [],
+        totalIdeas: result.totalIdeas,
+        exhausted: true,
+      }).catch(() => undefined)
+      setError(
+        "You've covered every idea in this source. Try a new source or a different focus, or replay your quizzes from History.",
+      )
+      return
+    }
     if (result.questions.length === 0) {
       setError(
         "We couldn't find any quiz questions in that reply. Make sure you copied the whole reply, including the JSON code block.",
@@ -107,10 +123,16 @@ function PasteFlow({ request }: { request: GenerationRequest }) {
       },
       provider: 'copy-paste',
       promptVersion: PROMPT_VERSION,
+      sourceId,
       questions: result.questions,
       createdAt: new Date().toISOString(),
     }
     void saveQuiz(quiz, 'pasted').catch(() => undefined)
+    void recordCoverage({ ...request, sourceId }, requestLabel(request.source), {
+      concepts: result.concepts,
+      prompts: result.questions.map((q) => q.prompt),
+      totalIdeas: result.totalIdeas,
+    }).catch(() => undefined)
     const playState: PlayState = { quiz, note: notes.join(' ') || undefined }
     navigate('/play', { state: playState })
   }

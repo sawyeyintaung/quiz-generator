@@ -16,6 +16,10 @@ export type GenerationRequest = {
   count: number
   difficulty: Difficulty
   types: QuestionType[]
+  /** Saved source this quiz belongs to (for "questions left" and the next batch). */
+  sourceId?: string
+  /** For a next batch: what earlier quizzes from the same source already covered. */
+  avoid?: { concepts: string[]; prompts: string[] }
 }
 
 export const questionCounts = [5, 10, 15, 20] as const

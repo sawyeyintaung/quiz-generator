@@ -6,6 +6,10 @@ import type { GenerationRequest } from './types.ts'
 export type PasteResult = {
   title?: string
   questions: Question[]
+  /** The concept label of each accepted question (same order as `questions`). */
+  concepts: string[]
+  /** The AI's estimate of distinct ideas in the whole source, if it gave one. */
+  totalIdeas?: number
   /** Items we found but could not use, so the user knows what happened. */
   skipped: { invalid: number; duplicates: number; extra: number }
 }
@@ -21,18 +25,25 @@ function candidates(text: string): string[] {
   return found
 }
 
-function asItems(value: unknown): { title?: string; items: unknown[] } | undefined {
+type Extracted = { title?: string; totalIdeas?: number; items: unknown[] }
+
+function asItems(value: unknown): Extracted | undefined {
   if (Array.isArray(value)) return { items: value }
   if (typeof value === 'object' && value !== null) {
     const v = value as Record<string, unknown>
     if (Array.isArray(v.questions)) {
-      return { title: typeof v.title === 'string' ? v.title : undefined, items: v.questions }
+      const total = typeof v.totalIdeas === 'number' ? Math.round(v.totalIdeas) : undefined
+      return {
+        title: typeof v.title === 'string' ? v.title : undefined,
+        totalIdeas: total && total > 0 && total < 100_000 ? total : undefined,
+        items: v.questions,
+      }
     }
   }
   return undefined
 }
 
-function extract(text: string): { title?: string; items: unknown[] } {
+function extract(text: string): Extracted {
   for (const candidate of candidates(text)) {
     try {
       const parsed = asItems(JSON.parse(candidate))
@@ -65,8 +76,9 @@ export function parsePastedReply(
   req: GenerationRequest,
   random: () => number = Math.random,
 ): PasteResult {
-  const { title, items } = extract(text)
+  const { title, totalIdeas, items } = extract(text)
   const questions: Question[] = []
+  const concepts: string[] = []
   const skipped = { invalid: 0, duplicates: 0, extra: 0 }
 
   for (const item of items) {
@@ -78,9 +90,23 @@ export function parsePastedReply(
     if (!q) skipped.invalid++
     else if (isDuplicate(q, questions)) skipped.duplicates++
     else if (questions.length >= req.count) skipped.extra++
-    else questions.push(q)
+    else {
+      questions.push(q)
+      const label = (item as Record<string, unknown>).concept
+      concepts.push(
+        typeof label === 'string' && label.trim()
+          ? label.trim().slice(0, 80)
+          : q.prompt.slice(0, 80),
+      )
+    }
   }
 
   const cleanTitle = title?.replace(/\s+/g, ' ').trim()
-  return { title: cleanTitle ? cleanTitle.slice(0, 60) : undefined, questions, skipped }
+  return {
+    title: cleanTitle ? cleanTitle.slice(0, 60) : undefined,
+    questions,
+    concepts,
+    totalIdeas,
+    skipped,
+  }
 }

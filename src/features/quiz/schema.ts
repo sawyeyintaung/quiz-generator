@@ -46,6 +46,8 @@ export const quizSchema = z.object({
   provider: z.string().optional(),
   model: z.string().optional(),
   promptVersion: z.number().int().optional(),
+  /** The saved source (in this browser) this quiz was made from. Never shared. */
+  sourceId: z.string().optional(),
   questions: z.array(questionSchema).min(1),
   createdAt: z.string(),
 })

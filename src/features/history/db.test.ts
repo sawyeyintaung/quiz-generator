@@ -6,6 +6,7 @@ import {
   deleteQuiz,
   exportHistory,
   importHistory,
+  recordCoverage,
   saveAttempt,
   saveQuiz,
   type Attempt,
@@ -29,6 +30,7 @@ const attempt = (id: string, correct: number, total = 8): Attempt => ({
 beforeEach(async () => {
   await db.quizzes.clear()
   await db.attempts.clear()
+  await db.sources.clear()
 })
 
 describe('history database', () => {
@@ -51,6 +53,21 @@ describe('history database', () => {
     await deleteQuiz(quiz.id)
     expect(await db.quizzes.count()).toBe(0)
     expect(await db.attempts.count()).toBe(0)
+  })
+
+  it('deletes a saved source with its last quiz', async () => {
+    const request = {
+      ...quiz.settings,
+      source: { kind: 'text' as const, text: 'My notes' },
+      sourceId: 'src-1',
+    }
+    await recordCoverage(request, 'My notes', { concepts: ['a'], prompts: ['Q?'] })
+    await saveQuiz({ ...quiz, id: 'one', sourceId: 'src-1' })
+    await saveQuiz({ ...quiz, id: 'two', sourceId: 'src-1' })
+    await deleteQuiz('one')
+    expect(await db.sources.get('src-1')).toBeDefined() // still used by quiz "two"
+    await deleteQuiz('two')
+    expect(await db.sources.get('src-1')).toBeUndefined()
   })
 
   it('exports and restores a backup', async () => {

@@ -20,6 +20,10 @@ export type GenerationJob = {
   title?: string
   plannedCount?: number
   questions: Question[]
+  /** The planned idea each question covers (same order as `questions`). */
+  concepts: string[]
+  /** The AI's estimate of distinct ideas in the whole source. */
+  totalIdeas?: number
   note?: string
   error?: { kind: AiErrorKind; message: string; detail?: string }
   createdAt: string
@@ -47,8 +51,10 @@ function update(id: string, patch: Partial<GenerationJob>) {
   listeners.forEach((l) => l())
 }
 
-export function startGeneration(request: GenerationRequest, credentials: Credentials): string {
+export function startGeneration(input: GenerationRequest, credentials: Credentials): string {
   const id = newId()
+  // Every quiz belongs to a saved source, so later batches can continue without repeats.
+  const request: GenerationRequest = { ...input, sourceId: input.sourceId ?? newId() }
   const controller = new AbortController()
   jobs.set(id, {
     id,
@@ -57,6 +63,7 @@ export function startGeneration(request: GenerationRequest, credentials: Credent
     model: credentials.model,
     status: 'planning',
     questions: [],
+    concepts: [],
     createdAt: new Date().toISOString(),
   })
   controllers.set(id, controller)
@@ -78,19 +85,21 @@ async function run(
       const job = jobs.get(id)
       if (!job) return
       if (event.type === 'planned') {
-        update(id, { status: 'writing', title: event.title, plannedCount: event.plannedCount })
+        update(id, {
+          status: 'writing',
+          title: event.title,
+          plannedCount: event.plannedCount,
+          totalIdeas: event.totalIdeas,
+        })
       } else if (event.type === 'question') {
-        update(id, { questions: [...job.questions, event.question] })
+        update(id, {
+          questions: [...job.questions, event.question],
+          concepts: [...job.concepts, event.concept],
+        })
       } else {
         update(id, { status: 'done', note: event.note })
-        const finished = jobs.get(id)
         // Save as soon as it is complete, so it survives a reload even if never finished.
-        if (finished) {
-          // Loaded on demand so the database code isn't part of the first download.
-          void import('../history/db.ts')
-            .then(({ saveQuiz }) => saveQuiz(jobToQuiz(finished)))
-            .catch(() => undefined)
-        }
+        persist(id)
       }
     }
   } catch (error) {
@@ -100,9 +109,28 @@ async function run(
       status: 'error',
       error: { kind: aiError.kind, message: aiError.message, detail: aiError.detail },
     })
+    // Nothing new left: remember that, so the source shows as fully covered.
+    if (aiError.kind === 'source_exhausted') persist(id, { exhausted: true })
   } finally {
     controllers.delete(id)
   }
+}
+
+/** Saves the quiz and what it covered (database code loads on demand: not in the first download). */
+function persist(id: string, { exhausted = false } = {}) {
+  const job = jobs.get(id)
+  if (!job) return
+  void import('../history/db.ts')
+    .then(async ({ saveQuiz, recordCoverage }) => {
+      if (job.questions.length > 0) await saveQuiz(jobToQuiz(job))
+      await recordCoverage(job.request, requestLabel(job.request.source), {
+        concepts: job.concepts,
+        prompts: job.questions.map((q) => q.prompt),
+        totalIdeas: job.totalIdeas,
+        exhausted,
+      })
+    })
+    .catch(() => undefined)
 }
 
 export function cancelGeneration(id: string) {
@@ -141,6 +169,7 @@ export function jobToQuiz(job: GenerationJob): Quiz {
     provider: job.provider,
     model: job.model,
     promptVersion: PROMPT_VERSION,
+    sourceId: request.sourceId,
     questions: job.questions,
     createdAt: job.createdAt,
   }

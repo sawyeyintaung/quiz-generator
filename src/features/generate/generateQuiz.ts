@@ -5,7 +5,7 @@ import type { AiClient } from '../ai/types.ts'
 import type { Question } from '../quiz/schema.ts'
 import { isDuplicate, uniqueConcepts } from './dedupe.ts'
 import { toQuestion } from './modelQuestion.ts'
-import { planPrompt, SYSTEM_PROMPT, writePrompt } from './prompts.ts'
+import { MAX_AVOID_PROMPTS, planPrompt, SYSTEM_PROMPT, writePrompt } from './prompts.ts'
 import type { GenerationRequest } from './types.ts'
 
 // Room for the model's reasoning as well as its answer; unused tokens are not billed.
@@ -14,12 +14,15 @@ const WRITE_MAX_TOKENS = 32_000
 
 export const planSchema = z.object({
   title: z.string(),
+  /** Estimated distinct ideas in the whole source (for "questions left"). */
+  totalIdeas: z.number().int().nonnegative().optional(),
   concepts: z.array(z.string()),
 })
 
 export type GenerationEvent =
-  | { type: 'planned'; title: string; plannedCount: number }
-  | { type: 'question'; question: Question }
+  | { type: 'planned'; title: string; plannedCount: number; totalIdeas?: number }
+  /** `concept` is the planned idea this question covers. */
+  | { type: 'question'; question: Question; concept: string }
   | { type: 'done'; note?: string }
 
 type Options = { signal?: AbortSignal; random?: () => number }
@@ -62,10 +65,16 @@ export async function* generateQuiz(
   const concepts = uniqueConcepts(plan.concepts)
     .slice(0, req.count)
     .map((text, i) => ({ number: i + 1, text }))
-  if (concepts.length === 0) throw new AiError('empty_source')
+  const continuing = Boolean(req.avoid?.concepts.length)
+  if (concepts.length === 0) throw new AiError(continuing ? 'source_exhausted' : 'empty_source')
 
   const title = cleanTitle(plan.title, req)
-  yield { type: 'planned', title, plannedCount: concepts.length }
+  yield {
+    type: 'planned',
+    title,
+    plannedCount: concepts.length,
+    totalIdeas: plan.totalIdeas || undefined,
+  }
 
   // 2. Write (plus one top-up round for concepts that came back missing or duplicated)
   const accepted: Question[] = []
@@ -76,7 +85,11 @@ export async function* generateQuiz(
     const pending = concepts.filter((c) => !covered.has(c.number))
     if (pending.length === 0) break
     try {
-      const avoid = accepted.map((q) => q.prompt)
+      // Earlier batches' questions plus this batch's: none may be repeated.
+      const avoid = [
+        ...(req.avoid?.prompts.slice(-MAX_AVOID_PROMPTS) ?? []),
+        ...accepted.map((q) => q.prompt),
+      ]
       const stream = client.streamText({
         system: SYSTEM_PROMPT,
         prompt: writePrompt(req, pending, avoid),
@@ -94,7 +107,7 @@ export async function* generateQuiz(
         if (owner === undefined) continue // more questions than planned concepts
         covered.add(owner)
         accepted.push(question)
-        yield { type: 'question', question }
+        yield { type: 'question', question, concept: concepts[owner - 1].text }
       }
     } catch (error) {
       const aiError = toAiError(error)
@@ -112,6 +125,9 @@ export async function* generateQuiz(
 
 function fewerNote(made: number, req: GenerationRequest): string | undefined {
   if (made >= req.count) return undefined
+  if (req.avoid?.concepts.length) {
+    return `Only ${made} new idea${made === 1 ? ' was' : 's were'} left in this source, so we made ${made} question${made === 1 ? '' : 's'}.`
+  }
   const what = req.focus?.trim() ? 'this focus' : 'your source'
   return `${capitalize(what)} supports ${made} unique question${made === 1 ? '' : 's'}, so we made ${made} instead of ${req.count} rather than repeat ourselves.`
 }

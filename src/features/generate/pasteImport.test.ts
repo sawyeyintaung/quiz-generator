@@ -64,3 +64,30 @@ describe('pastePrompt for a web page', () => {
     expect(prompt).not.toContain('do not run any tools')
   })
 })
+
+describe('pasted replies across batches', () => {
+  it('reads the total and each question’s concept label', () => {
+    const withConcept = (q: string, concept: string) =>
+      JSON.stringify({ ...JSON.parse(q), concept })
+    const reply = `{"title": "Volcanoes", "totalIdeas": 30, "questions": [${withConcept(q1, 'Lava')}, ${withConcept(q2, 'Ring of Fire')}]}`
+    const r = parsePastedReply(reply, req)
+    expect(r.totalIdeas).toBe(30)
+    expect(r.concepts).toEqual(['Lava', 'Ring of Fire'])
+  })
+
+  it('falls back to the question when no concept label is given', () => {
+    expect(parsePastedReply(`[${q1}]`, req).concepts).toEqual([
+      'What is magma called at the surface?',
+    ])
+  })
+
+  it('lists covered ideas in the next batch instructions', () => {
+    const prompt = pastePrompt({
+      ...req,
+      avoid: { concepts: ['Lava', 'Ring of Fire'], prompts: [] },
+    })
+    expect(prompt).toContain('already covered these ideas')
+    expect(prompt).toContain('- Ring of Fire')
+    expect(prompt).toContain('"totalIdeas"')
+  })
+})
