@@ -53,6 +53,16 @@ protects the user's spend.
 - Difficulty: Easy / Medium / Hard
 - Question types: Multiple choice, True/False (choose one or both)
 
+## Prompting: the app owns the instructions
+Users provide only the **source** and the **settings**; they never write prompts.
+- All instructions (difficulty rubric, plan-then-write steps, duplicate rules, output schema)
+  live in versioned prompt templates in the app, tunable per provider.
+- Source content is placed in a clearly delimited "source material" block and the model is told
+  to treat it as data, never as instructions (prompt-injection defence; schema validation backs it up).
+- The topic field may include a natural focus ("…focus on the light reactions"); it is still
+  treated as the subject, not as instructions about format or rules.
+- Prompts ship in the client bundle, so they are not secret; they contain no keys.
+
 ## Question quality: avoiding duplicates
 Duplicates usually happen when the requested count is larger than the number of distinct
 facts in the source. Three layers prevent it:
