@@ -5,6 +5,8 @@ import type { RecordedAnswer } from './session.ts'
 export type PlayState = {
   quiz: Quiz
   questionIds?: string[]
+  /** Shown above the first question, e.g. what was skipped from a pasted reply. */
+  note?: string
 }
 
 /** Router state passed to /results when a run finishes. */

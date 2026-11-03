@@ -67,6 +67,14 @@ function typeGuidance(types: QuestionType[]): string {
   return 'Use mostly multiple choice questions, with about one in three as true/false.'
 }
 
+const QUESTION_RULES = `Rules:
+- Multiple choice: exactly 4 options and exactly one correct answer. Keep options short and similar in length and style.
+- Do not use "All of the above" or "None of the above". Avoid "Which is NOT..." unless it is essential.
+- True/false: the statement must be clearly true or clearly false. Use a mix of true and false answers.
+- Every question tests its own concept. No two questions may ask the same thing, and a true/false question must not restate another question's answer.
+- explanation: one or two sentences explaining why the correct answer is right.
+- Write each prompt so it stands on its own: do not mention "the text", "the source", or "the passage".`
+
 export function writePrompt(
   req: GenerationRequest,
   concepts: { number: number; text: string }[],
@@ -89,11 +97,37 @@ Multiple choice line:
 True/false line:
 {"concept": 2, "type": "true_false", "prompt": "...", "answer": true, "explanation": "..."}
 
-Rules:
-- Multiple choice: exactly 4 options and exactly one correct answer. Keep options short and similar in length and style.
-- Do not use "All of the above" or "None of the above". Avoid "Which is NOT..." unless it is essential.
-- True/false: the statement must be clearly true or clearly false. Use a mix of true and false answers.
-- Every question tests its own concept. No two questions may ask the same thing, and a true/false question must not restate another question's answer.
-- explanation: one or two sentences explaining why the correct answer is right.
-- Write each prompt so it stands on its own: do not mention "the text", "the source", or "the passage".`
+${QUESTION_RULES}`
+}
+
+const MC_EXAMPLE =
+  '{"type": "multiple_choice", "prompt": "...", "options": ["...", "...", "...", "..."], "correctIndex": 0, "explanation": "..."}'
+const TF_EXAMPLE = '{"type": "true_false", "prompt": "...", "answer": true, "explanation": "..."}'
+
+/**
+ * One self-contained prompt for copy & paste mode: the learner pastes it into
+ * Claude Code, claude.ai or ChatGPT and pastes the JSON reply back into the app.
+ */
+export function pastePrompt(req: GenerationRequest): string {
+  const examples = req.types.map((t) => (t === 'multiple_choice' ? MC_EXAMPLE : TF_EXAMPLE))
+  return `${SYSTEM_PROMPT}
+
+${sourceBlock(req)}
+
+Create a quiz of up to ${req.count} questions at ${req.difficulty} difficulty.
+First, silently choose up to ${req.count} distinct key concepts. Each must test a different fact or idea. If the source supports fewer than ${req.count}, choose fewer: never pad the quiz or repeat an idea in different words.
+${sourceRules(req).join('\n')}
+Then write one question per concept.
+
+${typeGuidance(req.types)}
+
+${QUESTION_RULES}
+
+Reply with only one JSON code block in exactly this shape, and nothing else. Do not create or edit files, and do not run any tools or commands.
+
+\`\`\`json
+{"title": "short quiz title, at most 60 characters", "questions": [
+${examples.join(',\n')}
+]}
+\`\`\``
 }

@@ -2,7 +2,12 @@ import { useSyncExternalStore } from 'react'
 import { providerIds, providers } from '../ai/providers.ts'
 import type { ProviderId } from '../ai/types.ts'
 
+/** 'api': call an AI provider with the user's key. 'paste': copy instructions into
+ *  Claude Code / claude.ai / ChatGPT and paste the reply back (uses the user's subscription). */
+export type GenerationMode = 'api' | 'paste'
+
 export type Settings = {
+  mode: GenerationMode
   provider: ProviderId
   /** Chosen model per provider. */
   models: Record<ProviderId, string>
@@ -16,6 +21,7 @@ const PREFS_KEY = 'qg.settings.v1'
 const KEYS_KEY = 'qg.apiKeys.v1'
 
 const defaultSettings: Settings = {
+  mode: 'api',
   provider: 'anthropic',
   models: Object.fromEntries(providerIds.map((id) => [id, providers[id].defaultModel])) as Record<
     ProviderId,
@@ -70,6 +76,7 @@ function load(): Settings {
     if (typeof m === 'string' && m) models[id] = m
   }
   return {
+    mode: prefs?.mode === 'paste' ? 'paste' : 'api',
     provider: isProvider(prefs?.provider) ? prefs.provider : defaultSettings.provider,
     models,
     rememberKeys,
@@ -78,7 +85,12 @@ function load(): Settings {
 }
 
 function persist(s: Settings) {
-  write(local, PREFS_KEY, { provider: s.provider, models: s.models, rememberKeys: s.rememberKeys })
+  write(local, PREFS_KEY, {
+    mode: s.mode,
+    provider: s.provider,
+    models: s.models,
+    rememberKeys: s.rememberKeys,
+  })
   const hasKeys = Object.keys(s.keys).length > 0
   // Keys live in exactly one place, and never in localStorage unless the user opted in.
   write(s.rememberKeys ? local : session, KEYS_KEY, hasKeys ? s.keys : undefined)

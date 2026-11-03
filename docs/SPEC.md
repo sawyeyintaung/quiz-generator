@@ -41,6 +41,23 @@ Why: the API key never touches a server of ours, there is no server for anyone t
 - **Errors:** invalid key, quota exhausted, rate-limited, model unavailable and CORS/network
   errors are mapped to clear, friendly messages.
 
+## Copy & paste mode (use your own subscription)
+
+For learners who want to use their Claude Code, Claude or ChatGPT subscription instead of
+paying for API credit. Subscription logins cannot be used by third-party apps, so the learner
+runs the AI step themselves:
+
+1. Settings → "Copy & paste with my subscription" (or the button on the Create page).
+2. Create page → "Get instructions": the app builds one self-contained prompt (same rules,
+   difficulty rubric and source-as-data framing as API mode) asking for a single JSON code block.
+3. The learner copies it into Claude Code (or claude.ai / ChatGPT). Claude Code users can also
+   download the prompt and run `claude -p "$(cat ~/Downloads/quiz-prompt.txt)"`.
+4. They paste the reply back. The app extracts the JSON (fenced block, bare object/array or
+   JSON Lines), validates every question, shuffles options, drops duplicates/extras and tells
+   the learner what was skipped, then starts the quiz.
+
+Nothing is sent anywhere by the app in this mode.
+
 ## Inputs
 
 | Source              | How it works                                                                                                |

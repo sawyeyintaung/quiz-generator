@@ -34,7 +34,15 @@ export function PlayPage() {
       ? playState.quiz.questions.filter((q) => ids.includes(q.id))
       : playState.quiz.questions
     // Keyed by location so "Retry" (a new navigation) always starts a fresh session.
-    return <PlaySession key={location.key} quiz={playState.quiz} questions={questions} complete />
+    return (
+      <PlaySession
+        key={location.key}
+        quiz={playState.quiz}
+        questions={questions}
+        complete
+        note={playState.note}
+      />
+    )
   }
   if (jobId) return <GeneratedPlay key={jobId} jobId={jobId} />
   if (searchParams.has('demo')) {

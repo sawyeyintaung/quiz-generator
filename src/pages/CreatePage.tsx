@@ -21,7 +21,12 @@ import {
   type Draft,
   type SourceTab,
 } from '../features/create/draft.ts'
-import { activeCredentials, useSettings } from '../features/settings/settingsStore.ts'
+import {
+  activeCredentials,
+  updateSettings,
+  useSettings,
+} from '../features/settings/settingsStore.ts'
+import type { PastePageState } from './PastePage.tsx'
 
 const tabs: { id: SourceTab; label: string; soon?: boolean }[] = [
   { id: 'topic', label: 'Topic' },
@@ -34,6 +39,7 @@ export function CreatePage() {
   const navigate = useNavigate()
   const settings = useSettings()
   const credentials = activeCredentials(settings)
+  const pasteMode = settings.mode === 'paste'
   const [draft, setDraftState] = useState<Draft>(getDraft)
   const [submitted, setSubmitted] = useState(false)
   const ids = { topic: useId(), text: useId(), focus: useId() }
@@ -64,10 +70,6 @@ export function CreatePage() {
     e.preventDefault()
     setSubmitted(true)
     if (sourceError) return
-    if (!credentials) {
-      navigate('/settings')
-      return
-    }
     const request: GenerationRequest = {
       source:
         draft.tab === 'topic'
@@ -77,6 +79,15 @@ export function CreatePage() {
       count: draft.count,
       difficulty: draft.difficulty,
       types: draft.types,
+    }
+    if (pasteMode) {
+      const state: PastePageState = { request }
+      navigate('/paste', { state })
+      return
+    }
+    if (!credentials) {
+      navigate('/settings')
+      return
     }
     const id = startGeneration(request, credentials)
     navigate(`/play?job=${id}`)
@@ -93,24 +104,32 @@ export function CreatePage() {
         Add a topic or your notes, pick your settings, and start answering in seconds.
       </p>
 
-      {!credentials && (
+      {!credentials && !pasteMode && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-6 flex flex-col gap-3 rounded-2xl border border-amber-500/40 bg-amber-400/10 p-5 sm:flex-row sm:items-center sm:justify-between"
+          className="mt-6 rounded-2xl border border-amber-500/40 bg-amber-400/10 p-5"
         >
-          <div>
-            <h2 className="font-semibold">Add your API key to create quizzes</h2>
-            <p className="text-muted mt-1 text-sm">
-              Use your own key from Anthropic, OpenAI or Google. It stays in this browser.
-            </p>
+          <h2 className="font-semibold">How do you want to create quizzes?</h2>
+          <p className="text-muted mt-1 text-sm">
+            Add your own API key from Anthropic, OpenAI or Google, or use your Claude Code, Claude
+            or ChatGPT subscription by copying and pasting.
+          </p>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <Link
+              to="/settings"
+              className="bg-accent hover:bg-accent-strong rounded-xl px-5 py-2.5 text-center font-semibold text-white"
+            >
+              Add API key
+            </Link>
+            <button
+              type="button"
+              onClick={() => updateSettings({ mode: 'paste' })}
+              className="border-brand text-brand hover:bg-brand/10 rounded-xl border-2 px-5 py-2.5 font-semibold"
+            >
+              Use my subscription (copy &amp; paste)
+            </button>
           </div>
-          <Link
-            to="/settings"
-            className="bg-accent hover:bg-accent-strong shrink-0 rounded-xl px-5 py-2.5 text-center font-semibold text-white"
-          >
-            Add API key
-          </Link>
         </motion.div>
       )}
 
@@ -268,7 +287,14 @@ export function CreatePage() {
 
         <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-muted text-xs">
-            {credentials ? (
+            {pasteMode ? (
+              <>
+                Using copy &amp; paste with your subscription ·{' '}
+                <Link to="/settings" className="text-brand underline">
+                  Change
+                </Link>
+              </>
+            ) : credentials ? (
               <>
                 Using {providers[credentials.provider].name} · {credentials.model} ·{' '}
                 <Link to="/settings" className="text-brand underline">
@@ -285,7 +311,7 @@ export function CreatePage() {
             whileTap={{ scale: 0.98 }}
             className="bg-accent hover:bg-accent-strong rounded-xl px-6 py-3 font-semibold text-white shadow-sm"
           >
-            Generate quiz ✨
+            {pasteMode ? 'Get instructions →' : 'Generate quiz ✨'}
           </motion.button>
         </div>
       </form>

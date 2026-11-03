@@ -7,6 +7,7 @@ import { ResultsPage } from '../pages/ResultsPage.tsx'
 import { HistoryPage } from '../pages/HistoryPage.tsx'
 import { SettingsPage } from '../pages/SettingsPage.tsx'
 import { NotFoundPage } from '../pages/NotFoundPage.tsx'
+import { PastePage } from '../pages/PastePage.tsx'
 
 export const routes: RouteObject[] = [
   {
@@ -19,6 +20,7 @@ export const routes: RouteObject[] = [
       { path: 'results', element: <ResultsPage /> },
       { path: 'history', element: <HistoryPage /> },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'paste', element: <PastePage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

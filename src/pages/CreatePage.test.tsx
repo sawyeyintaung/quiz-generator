@@ -26,7 +26,7 @@ describe('creating a quiz', () => {
   it('asks for an API key first', async () => {
     const user = userEvent.setup()
     const router = renderAt('/')
-    expect(screen.getByText('Add your API key to create quizzes')).toBeInTheDocument()
+    expect(screen.getByText('How do you want to create quizzes?')).toBeInTheDocument()
     await user.type(screen.getByLabelText('What do you want to be quizzed on?'), 'Volcanoes')
     await user.click(screen.getByRole('button', { name: /Generate quiz/ }))
     expect(router.state.location.pathname).toBe('/settings')
