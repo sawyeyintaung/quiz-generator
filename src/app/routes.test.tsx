@@ -13,7 +13,7 @@ function renderAt(path: string) {
 describe('app routes', () => {
   it.each([
     ['/', 'Create a quiz'],
-    ['/play', 'Play'],
+    ['/play', 'No quiz loaded'],
     ['/results', 'Results'],
     ['/history', 'History'],
     ['/settings', 'Settings'],

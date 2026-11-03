@@ -3,7 +3,9 @@
 /* Design tokens. Use as Tailwind utilities, e.g. bg-surface, text-muted, bg-brand. */
 @theme {
   --color-brand: #6d4aff;
-  --color-brand-strong: #5a36f0;
+  /* Filled buttons with white text: same in both themes to keep >= 4.5:1 contrast. */
+  --color-accent: #6d4aff;
+  --color-accent-strong: #5a36f0;
   --color-correct: #16a34a;
   --color-wrong: #dc2626;
 
@@ -18,8 +20,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-brand: #8f75ff;
-    --color-brand-strong: #a592ff;
+    --color-brand: #a592ff;
     --color-correct: #22c55e;
     --color-wrong: #f87171;
 
