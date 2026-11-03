@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { describe, expect, it } from 'vitest'
@@ -54,13 +54,13 @@ describe('playing a quiz', () => {
       await nextQuestion(user)
     }
 
-    expect(router.state.location.pathname).toBe('/results')
+    await waitFor(() => expect(router.state.location.pathname).toBe('/results'))
     expect(await screen.findByRole('heading', { level: 1, name: 'Results' })).toBeInTheDocument()
     expect(screen.getByRole('img', { name: /You scored 7 out of 8/ })).toBeInTheDocument()
     expect(screen.getByText('Review what you missed')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Retry missed (1)' }))
-    expect(router.state.location.pathname).toBe('/play')
+    await waitFor(() => expect(router.state.location.pathname).toBe('/play'))
     expect(
       await screen.findByRole('heading', { name: demoQuiz.questions[0].prompt }),
     ).toBeInTheDocument()

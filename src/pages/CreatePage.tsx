@@ -34,6 +34,7 @@ import {
   useSettings,
 } from '../features/settings/settingsStore.ts'
 import type { PastePageState } from './PastePage.tsx'
+import { useDocumentTitle } from '../lib/useDocumentTitle.ts'
 
 const tabs: { id: SourceTab; label: string }[] = [
   { id: 'topic', label: 'Topic' },
@@ -43,6 +44,7 @@ const tabs: { id: SourceTab; label: string }[] = [
 ]
 
 export function CreatePage() {
+  useDocumentTitle('Create a quiz')
   const navigate = useNavigate()
   const settings = useSettings()
   const credentials = activeCredentials(settings)
@@ -227,15 +229,14 @@ export function CreatePage() {
         noValidate
         className="border-border bg-surface mt-6 rounded-2xl border p-5 shadow-sm sm:p-6"
       >
-        <div role="tablist" aria-label="Source" className="flex flex-wrap gap-2">
+        <div role="group" aria-label="Source" className="flex flex-wrap gap-2">
           {tabs.map((t) => {
             const active = draft.tab === t.id
             return (
               <button
                 key={t.id}
                 type="button"
-                role="tab"
-                aria-selected={active}
+                aria-pressed={active}
                 onClick={() => setDraft({ tab: t.id })}
                 className={`rounded-full border-2 px-4 py-1.5 text-sm font-medium transition-colors ${
                   active

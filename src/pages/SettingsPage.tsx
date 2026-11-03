@@ -10,6 +10,7 @@ import {
   updateSettings,
   useSettings,
 } from '../features/settings/settingsStore.ts'
+import { useDocumentTitle } from '../lib/useDocumentTitle.ts'
 
 type TestState =
   | { status: 'idle' }
@@ -21,6 +22,7 @@ type TestState =
 const fetchedModels: Partial<Record<ProviderId, ModelOption[]>> = {}
 
 export function SettingsPage() {
+  useDocumentTitle('Settings')
   const settings = useSettings()
   const provider = providers[settings.provider]
   const savedKey = settings.keys[settings.provider] ?? ''

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -29,13 +29,13 @@ describe('creating a quiz', () => {
     expect(screen.getByText('How do you want to create quizzes?')).toBeInTheDocument()
     await user.type(screen.getByLabelText('What do you want to be quizzed on?'), 'Volcanoes')
     await user.click(screen.getByRole('button', { name: /Generate quiz/ }))
-    expect(router.state.location.pathname).toBe('/settings')
+    await waitFor(() => expect(router.state.location.pathname).toBe('/settings'))
   })
 
   it('validates pasted notes and warns when asking for too many questions', async () => {
     const user = userEvent.setup()
     renderAt('/')
-    await user.click(screen.getByRole('tab', { name: 'Paste notes' }))
+    await user.click(screen.getByRole('button', { name: 'Paste notes' }))
     await user.type(screen.getByLabelText('Paste your notes or study text'), 'Too short.')
     await user.click(screen.getByRole('button', { name: /Generate quiz/ }))
     expect(screen.getByRole('alert')).toHaveTextContent('Paste at least 30 words')
@@ -69,7 +69,7 @@ describe('creating a quiz', () => {
     await user.click(screen.getByRole('radio', { name: '5' }))
     await user.click(screen.getByRole('button', { name: /Generate quiz/ }))
 
-    expect(router.state.location.pathname).toBe('/play')
+    await waitFor(() => expect(router.state.location.pathname).toBe('/play'))
     expect(await screen.findByRole('heading', { name: /magma called/ })).toBeInTheDocument()
     expect(calls.json[0].prompt).toContain('<focus>eruptions</focus>')
     expect(calls.json[0].prompt).toContain('up to 5 questions')
@@ -79,7 +79,7 @@ describe('creating a quiz', () => {
     await user.click(await screen.findByRole('button', { name: /True$/ }))
     await user.click(await screen.findByRole('button', { name: /See results/ }))
 
-    expect(router.state.location.pathname).toBe('/results')
+    await waitFor(() => expect(router.state.location.pathname).toBe('/results'))
     expect(await screen.findByRole('img', { name: /You scored 2 out of 2/ })).toBeInTheDocument()
     expect(screen.getByText(/supports 2 unique questions/)).toBeInTheDocument()
   })

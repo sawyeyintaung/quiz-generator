@@ -1,6 +1,8 @@
 import { Link } from 'react-router'
+import { useDocumentTitle } from '../lib/useDocumentTitle.ts'
 
 export function NotFoundPage() {
+  useDocumentTitle('Page not found')
   return (
     <section className="py-16 text-center">
       <h1 className="text-2xl font-bold">Page not found</h1>

@@ -20,6 +20,7 @@ import {
   parseSharedQuiz,
   ShareError,
 } from '../features/share/shareFormat.ts'
+import { useDocumentTitle } from '../lib/useDocumentTitle.ts'
 
 type Status = { kind: 'ok' | 'error'; message: string; quiz?: Quiz } | undefined
 
@@ -32,6 +33,7 @@ const originLabel: Record<QuizOrigin, string | undefined> = {
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
 
 export function HistoryPage() {
+  useDocumentTitle('History')
   const history = useHistory()
   const navigate = useNavigate()
   const fileInput = useRef<HTMLInputElement>(null)
@@ -116,7 +118,7 @@ export function HistoryPage() {
           <button
             type="button"
             onClick={() => void exportAll()}
-            disabled={!history?.length}
+            disabled={!Array.isArray(history) || history.length === 0}
             className="border-border hover:border-brand rounded-xl border-2 px-4 py-2 text-sm font-semibold disabled:opacity-40"
           >
             Export all
@@ -165,7 +167,20 @@ export function HistoryPage() {
         )}
       </AnimatePresence>
 
-      {history === undefined ? null : history.length === 0 ? (
+      {history === undefined ? null : history === 'unavailable' ? (
+        <div
+          className="border-border text-muted mt-8 rounded-2xl border border-dashed p-8 text-center"
+          role="alert"
+        >
+          <p className="text-text font-semibold">
+            History isn&apos;t available in this browser window
+          </p>
+          <p className="mt-1 text-sm">
+            Your browser is blocking storage for this site (this often happens in private windows).
+            You can still create, play and share quizzes; they just won&apos;t be saved here.
+          </p>
+        </div>
+      ) : history.length === 0 ? (
         <div className="border-border text-muted mt-8 rounded-2xl border border-dashed p-8 text-center">
           <p className="text-text font-semibold">No quizzes yet</p>
           <p className="mt-1 text-sm">

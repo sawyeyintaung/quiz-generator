@@ -88,7 +88,7 @@ export function WaitingCard() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="border-border bg-surface text-muted flex items-center gap-3 rounded-2xl border p-6"
+      className="border-border bg-surface text-muted flex items-center gap-3 rounded-2xl border p-6 [grid-area:1/1]"
       role="status"
     >
       <motion.span

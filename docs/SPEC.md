@@ -288,6 +288,21 @@ calling the AI again.
   with page ranges for PDFs); otherwise from one cached AI call on a condensed view of the
   source (API mode only). Links get no suggestions before the page is fetched.
 
+## Implementation notes (Milestone 6)
+
+- Content Security Policy injected into the production build (`security.config.ts`):
+  scripts from self only; `connect-src` limited to self + the three AI providers; no inline
+  styles or eval (Zod runs in `jitless` mode; question cards cross-slide in a shared grid cell
+  instead of Framer Motion's style-injecting `popLayout`). Host header files are emitted too.
+- Secondary pages (Results, History, Settings, Copy & paste) and the history database load on
+  demand; provider SDKs and file parsers were already lazy. First download ~173 KB gzipped.
+- Accessibility: axe-core reports no violations on any screen in light or dark mode (including
+  the share dialog); brand, correct and wrong colours meet 4.5:1; source pickers are toggle
+  buttons; the dialog traps and restores focus; every page sets its own title; consistent
+  `:focus-visible` outline; quizzes are fully playable by keyboard, even at speed.
+- Error states: storage blocked (private windows) on History, "new version available" with
+  Reload when an old tab can't load new code, plus the earlier provider/quota/link messages.
+
 ## Out of scope for v1
 
 Accounts, cloud sync, server-hosted share links, teacher mode / hidden answers, other question types (fill-in, ordering,

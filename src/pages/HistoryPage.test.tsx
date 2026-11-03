@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -35,7 +35,7 @@ describe('history and sharing', () => {
     const file = new File([JSON.stringify(toSharedQuiz(quiz))], 'planets.quiz.json', {
       type: 'application/json',
     })
-    await user.upload(screen.getByLabelText('Import a quiz or history file'), file)
+    await user.upload(await screen.findByLabelText('Import a quiz or history file'), file)
     expect(await screen.findByText('Imported “Planets 101”.')).toBeInTheDocument()
     const card = (await screen.findByRole('heading', { name: /Planets 101/ })).closest('li')!
     expect(within(card).getByText('Imported')).toBeInTheDocument()
@@ -50,7 +50,7 @@ describe('history and sharing', () => {
     const user = userEvent.setup()
     renderAt('/history')
     const file = new File(['{"hello": "world"}'], 'other.json', { type: 'application/json' })
-    await user.upload(screen.getByLabelText('Import a quiz or history file'), file)
+    await user.upload(await screen.findByLabelText('Import a quiz or history file'), file)
     expect(await screen.findByRole('alert')).toHaveTextContent(
       "doesn't look like a Quiz Generator quiz",
     )
@@ -67,7 +67,7 @@ describe('history and sharing', () => {
       await user.click(screen.getByRole('button', { name: new RegExp(`^.?\\s*${label}$`) }))
       await user.click(await screen.findByRole('button', { name: /next question|see results/i }))
     }
-    expect(router.state.location.pathname).toBe('/results')
+    await waitFor(() => expect(router.state.location.pathname).toBe('/results'))
     expect(await screen.findByText(/Saved to/)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Share' }))

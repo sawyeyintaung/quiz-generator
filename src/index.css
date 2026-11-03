@@ -2,12 +2,14 @@
 
 /* Design tokens. Use as Tailwind utilities, e.g. bg-surface, text-muted, bg-brand. */
 @theme {
-  --color-brand: #6d4aff;
+  /* Darker than the accent so brand-coloured text on tinted backgrounds stays >= 4.5:1. */
+  --color-brand: #5a36f0;
   /* Filled buttons with white text: same in both themes to keep >= 4.5:1 contrast. */
   --color-accent: #6d4aff;
   --color-accent-strong: #5a36f0;
-  --color-correct: #16a34a;
-  --color-wrong: #dc2626;
+  /* Dark enough to use as text on white or tinted backgrounds (>= 4.5:1). */
+  --color-correct: #15803d;
+  --color-wrong: #b91c1c;
 
   --color-bg: #f7f7fb;
   --color-surface: #ffffff;
@@ -39,4 +41,10 @@ html {
 body {
   @apply bg-bg text-text font-sans antialiased;
   min-height: 100dvh;
+}
+
+/* Clear keyboard focus everywhere (mouse clicks don't show it). */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
 }

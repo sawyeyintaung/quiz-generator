@@ -1,5 +1,9 @@
 import { z } from 'zod'
 
+// Zod's fast path uses eval, which our Content Security Policy forbids. Set here, in the
+// module every schema depends on, so it runs before any parsing however code is bundled.
+z.config({ jitless: true })
+
 export const multipleChoiceQuestionSchema = z.object({
   id: z.string().min(1),
   type: z.literal('multiple_choice'),

@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { describe, expect, it } from 'vitest'
@@ -29,7 +29,7 @@ describe('app routes', () => {
     const nav = screen.getByRole('navigation', { name: 'Main' })
 
     await user.click(within(nav).getByRole('link', { name: 'History' }))
-    expect(router.state.location.pathname).toBe('/history')
+    await waitFor(() => expect(router.state.location.pathname).toBe('/history'))
     expect(within(nav).getByRole('link', { name: 'History' })).toHaveAttribute(
       'aria-current',
       'page',

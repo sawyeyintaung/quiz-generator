@@ -105,9 +105,12 @@ async function loadHistory(): Promise<HistoryEntry[]> {
     .sort((a, b) => b.quiz.savedAt.localeCompare(a.quiz.savedAt))
 }
 
-/** Live history list; undefined while loading. Updates whenever the database changes. */
-export function useHistory(): HistoryEntry[] | undefined {
-  return useLiveQuery(loadHistory, [])
+/**
+ * Live history list; undefined while loading, 'unavailable' if this browser blocks
+ * storage (e.g. some private windows). Updates whenever the database changes.
+ */
+export function useHistory(): HistoryEntry[] | 'unavailable' | undefined {
+  return useLiveQuery(() => loadHistory().catch(() => 'unavailable' as const), [])
 }
 
 // ---- Backup (export / import of the whole history) ----

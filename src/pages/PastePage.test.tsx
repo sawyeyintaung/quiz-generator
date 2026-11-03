@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -25,9 +25,9 @@ describe('copy & paste mode', () => {
     await user.click(screen.getByRole('button', { name: /Use my subscription/ }))
     await user.type(screen.getByLabelText('What do you want to be quizzed on?'), 'Volcanoes')
     await user.click(screen.getByRole('button', { name: /Get instructions/ }))
-    expect(router.state.location.pathname).toBe('/paste')
+    await waitFor(() => expect(router.state.location.pathname).toBe('/paste'))
 
-    await user.click(screen.getByRole('button', { name: 'Copy instructions' }))
+    await user.click(await screen.findByRole('button', { name: 'Copy instructions' }))
     expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Volcanoes'))
     expect(await screen.findByText('Copied ✓')).toBeInTheDocument()
 
@@ -39,7 +39,7 @@ describe('copy & paste mode', () => {
     await user.paste(reply)
     await user.click(screen.getByRole('button', { name: /Start quiz/ }))
 
-    expect(router.state.location.pathname).toBe('/play')
+    await waitFor(() => expect(router.state.location.pathname).toBe('/play'))
     expect(await screen.findByRole('heading', { name: 'Volcano Quiz' })).toBeInTheDocument()
     expect(screen.getByText(/had 2 unique questions \(you asked for 10\)/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Lava$/ }))
@@ -64,7 +64,10 @@ describe('copy & paste mode', () => {
       ],
     })
     render(<RouterProvider router={router} />)
-    await user.type(screen.getByLabelText('Paste the reply here'), 'Sorry, I cannot do that.')
+    await user.type(
+      await screen.findByLabelText('Paste the reply here'),
+      'Sorry, I cannot do that.',
+    )
     await user.click(screen.getByRole('button', { name: /Start quiz/ }))
     expect(screen.getByRole('alert')).toHaveTextContent(/couldn't find any quiz questions/)
   })

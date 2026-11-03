@@ -17,6 +17,7 @@ import {
 } from '../features/generate/generationStore.ts'
 import { providers } from '../features/ai/providers.ts'
 import { newId } from '../lib/id.ts'
+import { useDocumentTitle } from '../lib/useDocumentTitle.ts'
 import { decodeQuizFromLink, ShareError } from '../features/share/shareFormat.ts'
 import { demoQuiz } from '../features/quiz/demoQuiz.ts'
 import { readPlayState, type ResultsState } from '../features/quiz/navigation.ts'
@@ -167,6 +168,7 @@ type SessionProps = {
 
 function PlaySession({ quiz, questions, complete, total = questions.length, note }: SessionProps) {
   const navigate = useNavigate()
+  useDocumentTitle(quiz.title)
   const [state, dispatch] = useReducer(sessionReducer, undefined, createSession)
   // One id per run, so saving the attempt is idempotent (reloads, double effects).
   const [attemptId] = useState(newId)
@@ -210,22 +212,26 @@ function PlaySession({ quiz, questions, complete, total = questions.length, note
           </motion.p>
         )}
       </AnimatePresence>
-      <AnimatePresence mode="wait">
-        {question ? (
-          <QuestionCard
-            key={question.id}
-            question={question}
-            number={state.index + 1}
-            total={Math.max(total, questions.length)}
-            answer={answer}
-            isLast={isLast}
-            onAnswer={(value) => dispatch({ type: 'answer', question, value })}
-            onNext={() => dispatch({ type: 'next' })}
-          />
-        ) : (
-          !complete && <WaitingCard key="waiting" />
-        )}
-      </AnimatePresence>
+      {/* Both cards share one grid cell, so the next card slides in while the old one
+          slides out and can take key presses right away (no injected styles: CSP-safe). */}
+      <div className="grid">
+        <AnimatePresence>
+          {question ? (
+            <QuestionCard
+              key={question.id}
+              question={question}
+              number={state.index + 1}
+              total={Math.max(total, questions.length)}
+              answer={answer}
+              isLast={isLast}
+              onAnswer={(value) => dispatch({ type: 'answer', question, value })}
+              onNext={() => dispatch({ type: 'next' })}
+            />
+          ) : (
+            !complete && <WaitingCard key="waiting" />
+          )}
+        </AnimatePresence>
+      </div>
     </section>
   )
 }

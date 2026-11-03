@@ -3,12 +3,10 @@ import { AppLayout } from './AppLayout.tsx'
 import { RouteErrorPage } from './RouteErrorPage.tsx'
 import { CreatePage } from '../pages/CreatePage.tsx'
 import { PlayPage } from '../pages/PlayPage.tsx'
-import { ResultsPage } from '../pages/ResultsPage.tsx'
-import { HistoryPage } from '../pages/HistoryPage.tsx'
-import { SettingsPage } from '../pages/SettingsPage.tsx'
 import { NotFoundPage } from '../pages/NotFoundPage.tsx'
-import { PastePage } from '../pages/PastePage.tsx'
 
+// Create and Play load up front (the main path). Other pages load on first visit,
+// which keeps the first download small (History and sharing need the database code).
 export const routes: RouteObject[] = [
   {
     path: '/',
@@ -17,10 +15,24 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <CreatePage /> },
       { path: 'play', element: <PlayPage /> },
-      { path: 'results', element: <ResultsPage /> },
-      { path: 'history', element: <HistoryPage /> },
-      { path: 'settings', element: <SettingsPage /> },
-      { path: 'paste', element: <PastePage /> },
+      {
+        path: 'results',
+        lazy: async () => ({ Component: (await import('../pages/ResultsPage.tsx')).ResultsPage }),
+      },
+      {
+        path: 'history',
+        lazy: async () => ({ Component: (await import('../pages/HistoryPage.tsx')).HistoryPage }),
+      },
+      {
+        path: 'settings',
+        lazy: async () => ({
+          Component: (await import('../pages/SettingsPage.tsx')).SettingsPage,
+        }),
+      },
+      {
+        path: 'paste',
+        lazy: async () => ({ Component: (await import('../pages/PastePage.tsx')).PastePage }),
+      },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

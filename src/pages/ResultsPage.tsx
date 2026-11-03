@@ -7,6 +7,7 @@ import { answerText, correctAnswerText } from '../features/quiz/schema.ts'
 import { celebrate } from '../lib/celebrate.ts'
 import { originOf, saveAttempt, saveQuiz } from '../features/history/db.ts'
 import { ShareDialog } from '../features/share/ShareDialog.tsx'
+import { useDocumentTitle } from '../lib/useDocumentTitle.ts'
 
 function headline(pct: number): string {
   if (pct === 100) return 'Perfect score!'
@@ -16,6 +17,7 @@ function headline(pct: number): string {
 }
 
 export function ResultsPage() {
+  useDocumentTitle('Results')
   const location = useLocation()
   const navigate = useNavigate()
   const results = readResultsState(location.state)

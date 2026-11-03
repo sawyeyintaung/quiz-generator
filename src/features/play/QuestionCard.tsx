@@ -86,7 +86,7 @@ export function QuestionCard({ question, number, total, answer, isLast, onAnswer
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -48 }}
       transition={{ duration: 0.28, ease: 'easeOut' }}
-      className="border-border bg-surface rounded-2xl border p-5 shadow-sm sm:p-7"
+      className="border-border bg-surface rounded-2xl border p-5 shadow-sm [grid-area:1/1] sm:p-7"
       aria-labelledby={`q-${question.id}`}
     >
       <p className="text-muted text-xs font-semibold tracking-wide uppercase">

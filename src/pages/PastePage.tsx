@@ -10,6 +10,7 @@ import { saveQuiz } from '../features/history/db.ts'
 import { newId } from '../lib/id.ts'
 import type { PlayState } from '../features/quiz/navigation.ts'
 import type { Quiz } from '../features/quiz/schema.ts'
+import { useDocumentTitle } from '../lib/useDocumentTitle.ts'
 
 export type PastePageState = { request: GenerationRequest }
 
@@ -26,6 +27,7 @@ function readState(value: unknown): PastePageState | undefined {
 }
 
 export function PastePage() {
+  useDocumentTitle('Copy & paste')
   const location = useLocation()
   const state = readState(location.state)
   if (!state) {
@@ -158,7 +160,7 @@ function PasteFlow({ request }: { request: GenerationRequest }) {
             <span className={stepNumber}>2</span>
             <h2 className="font-semibold">Paste them into your AI app</h2>
           </div>
-          <div role="tablist" aria-label="AI app" className="mt-4 flex flex-wrap gap-2">
+          <div role="group" aria-label="AI app" className="mt-4 flex flex-wrap gap-2">
             {(
               [
                 ['claude-code', 'Claude Code'],
@@ -169,8 +171,7 @@ function PasteFlow({ request }: { request: GenerationRequest }) {
               <button
                 key={id}
                 type="button"
-                role="tab"
-                aria-selected={target === id}
+                aria-pressed={target === id}
                 onClick={() => setTarget(id)}
                 className={`rounded-full border-2 px-4 py-1.5 text-sm font-medium ${
                   target === id ? 'border-brand bg-brand/10 text-brand' : 'border-border text-muted'
