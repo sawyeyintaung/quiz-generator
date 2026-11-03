@@ -41,6 +41,7 @@ export const quizSchema = z.object({
   }),
   provider: z.string().optional(),
   model: z.string().optional(),
+  promptVersion: z.number().int().optional(),
   questions: z.array(questionSchema).min(1),
   createdAt: z.string(),
 })
@@ -49,6 +50,7 @@ export type MultipleChoiceQuestion = z.infer<typeof multipleChoiceQuestionSchema
 export type TrueFalseQuestion = z.infer<typeof trueFalseQuestionSchema>
 export type Question = z.infer<typeof questionSchema>
 export type Quiz = z.infer<typeof quizSchema>
+export type QuestionType = z.infer<typeof questionTypeSchema>
 
 /** The user's answer: option index for multiple choice, boolean for true/false. */
 export type AnswerValue = number | boolean

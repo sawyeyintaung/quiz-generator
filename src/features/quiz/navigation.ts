@@ -13,6 +13,8 @@ export type ResultsState = {
   questionIds: string[]
   answers: RecordedAnswer[]
   bestStreak: number
+  /** e.g. why fewer questions were made than requested. */
+  note?: string
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

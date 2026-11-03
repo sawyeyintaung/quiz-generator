@@ -1,95 +1,181 @@
-import { AnimatePresence } from 'framer-motion'
-import { useReducer } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { useEffect, useReducer } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
+import {
+  GeneratingCard,
+  GenerationFailed,
+  WaitingCard,
+} from '../features/play/GenerationStatus.tsx'
 import { PlayHeader } from '../features/play/PlayHeader.tsx'
 import { QuestionCard } from '../features/play/QuestionCard.tsx'
+import {
+  cancelGeneration,
+  isFinished,
+  jobToQuiz,
+  retryGeneration,
+  useJob,
+} from '../features/generate/generationStore.ts'
 import { demoQuiz } from '../features/quiz/demoQuiz.ts'
 import { readPlayState, type ResultsState } from '../features/quiz/navigation.ts'
 import type { Question, Quiz } from '../features/quiz/schema.ts'
-import {
-  createSession,
-  currentAnswer,
-  currentQuestion,
-  score,
-  sessionReducer,
-} from '../features/quiz/session.ts'
+import { answerFor, createSession, score, sessionReducer } from '../features/quiz/session.ts'
+import { activeCredentials, useSettings } from '../features/settings/settingsStore.ts'
 
 export function PlayPage() {
   const location = useLocation()
   const [searchParams] = useSearchParams()
+  const jobId = searchParams.get('job')
   const playState = readPlayState(location.state)
-  const quiz = playState?.quiz ?? (searchParams.has('demo') ? demoQuiz : undefined)
 
-  if (!quiz) {
+  if (playState) {
+    const ids = playState.questionIds
+    const questions = ids
+      ? playState.quiz.questions.filter((q) => ids.includes(q.id))
+      : playState.quiz.questions
+    // Keyed by location so "Retry" (a new navigation) always starts a fresh session.
+    return <PlaySession key={location.key} quiz={playState.quiz} questions={questions} complete />
+  }
+  if (jobId) return <GeneratedPlay key={jobId} jobId={jobId} />
+  if (searchParams.has('demo')) {
     return (
-      <section className="py-12 text-center">
-        <h1 className="text-2xl font-bold">No quiz loaded</h1>
-        <p className="text-muted mt-2">Create a quiz, or try the demo to see how it works.</p>
-        <div className="mt-6 flex justify-center gap-3">
-          <Link
-            to="/play?demo"
-            className="bg-accent hover:bg-accent-strong rounded-xl px-5 py-2.5 font-semibold text-white"
-          >
-            Play the demo quiz
-          </Link>
-          <Link to="/" className="border-border rounded-xl border px-5 py-2.5 font-semibold">
-            Create a quiz
-          </Link>
-        </div>
-      </section>
+      <PlaySession key={location.key} quiz={demoQuiz} questions={demoQuiz.questions} complete />
     )
   }
 
-  const ids = playState?.questionIds
-  const questions = ids ? quiz.questions.filter((q) => ids.includes(q.id)) : quiz.questions
-
-  // Keyed by location so "Retry" (a new navigation) always starts a fresh session.
-  return <PlaySession key={location.key} quiz={quiz} questions={questions} />
+  return (
+    <section className="py-12 text-center">
+      <h1 className="text-2xl font-bold">No quiz loaded</h1>
+      <p className="text-muted mt-2">Create a quiz, or try the demo to see how it works.</p>
+      <div className="mt-6 flex justify-center gap-3">
+        <Link
+          to="/play?demo"
+          className="bg-accent hover:bg-accent-strong rounded-xl px-5 py-2.5 font-semibold text-white"
+        >
+          Play the demo quiz
+        </Link>
+        <Link to="/" className="border-border rounded-xl border px-5 py-2.5 font-semibold">
+          Create a quiz
+        </Link>
+      </div>
+    </section>
+  )
 }
 
-function PlaySession({ quiz, questions }: { quiz: Quiz; questions: Question[] }) {
+function GeneratedPlay({ jobId }: { jobId: string }) {
+  const job = useJob(jobId)
+  const settings = useSettings()
   const navigate = useNavigate()
-  const [state, dispatch] = useReducer(sessionReducer, questions, createSession)
-  const question = currentQuestion(state)
-  const answer = currentAnswer(state)
-  const isLast = state.index === questions.length - 1
 
-  function handleNext() {
-    if (isLast) {
-      const results: ResultsState = {
-        quiz,
-        questionIds: questions.map((q) => q.id),
-        answers: state.answers,
-        bestStreak: state.bestStreak,
-      }
-      navigate('/results', { state: results, replace: true })
-    } else {
-      dispatch({ type: 'next' })
-    }
+  if (!job) {
+    return (
+      <GenerationFailed
+        title="Quiz not found"
+        message="This quiz was being created in a tab that has since been closed or reloaded. Please create it again."
+      />
+    )
   }
 
-  if (!question) return null
+  const retry = () => {
+    const apiKey = activeCredentials(settings)?.apiKey ?? settings.keys[job.provider]
+    const id = apiKey ? retryGeneration(job.id, apiKey) : undefined
+    if (id) navigate(`/play?job=${id}`, { replace: true })
+    else navigate('/settings')
+  }
+
+  if (job.questions.length === 0) {
+    if (job.status === 'error') {
+      return (
+        <GenerationFailed
+          title="Couldn't create your quiz"
+          message={job.error ?? ''}
+          onRetry={retry}
+        />
+      )
+    }
+    if (job.status === 'cancelled') {
+      return <GenerationFailed title="Cancelled" message="No questions were created." />
+    }
+    return <GeneratingCard job={job} onCancel={() => cancelGeneration(job.id)} />
+  }
+
+  const complete = isFinished(job)
+  return (
+    <PlaySession
+      quiz={jobToQuiz(job)}
+      questions={job.questions}
+      complete={complete}
+      total={complete ? job.questions.length : (job.plannedCount ?? job.questions.length)}
+      note={job.note ?? (job.status === 'cancelled' ? 'Generation was cancelled.' : undefined)}
+    />
+  )
+}
+
+type SessionProps = {
+  quiz: Quiz
+  questions: Question[]
+  /** False while more questions may still arrive. */
+  complete: boolean
+  total?: number
+  note?: string
+}
+
+function PlaySession({ quiz, questions, complete, total = questions.length, note }: SessionProps) {
+  const navigate = useNavigate()
+  const [state, dispatch] = useReducer(sessionReducer, undefined, createSession)
+  const question = questions[state.index]
+  const answer = answerFor(state, question)
+  const isLast = complete && state.index === questions.length - 1
+  const outOfQuestions = complete && state.index >= questions.length
+
+  useEffect(() => {
+    if (!outOfQuestions) return
+    // Generation ended while the player was waiting for another question.
+    const results: ResultsState = {
+      quiz: { ...quiz, questions },
+      questionIds: questions.map((q) => q.id),
+      answers: state.answers,
+      bestStreak: state.bestStreak,
+      note,
+    }
+    navigate('/results', { state: results, replace: true })
+  }, [outOfQuestions, quiz, questions, state.answers, state.bestStreak, note, navigate])
 
   return (
     <section>
       <PlayHeader
         title={quiz.title}
         answered={state.answers.length}
-        total={questions.length}
+        total={Math.max(total, questions.length)}
         score={score(state)}
         streak={state.streak}
       />
+      <AnimatePresence>
+        {note && (
+          <motion.p
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="bg-brand/10 text-text mb-4 overflow-hidden rounded-xl px-4 py-3 text-sm"
+            role="status"
+          >
+            {note}
+          </motion.p>
+        )}
+      </AnimatePresence>
       <AnimatePresence mode="wait">
-        <QuestionCard
-          key={question.id}
-          question={question}
-          number={state.index + 1}
-          total={questions.length}
-          answer={answer}
-          isLast={isLast}
-          onAnswer={(value) => dispatch({ type: 'answer', value })}
-          onNext={handleNext}
-        />
+        {question ? (
+          <QuestionCard
+            key={question.id}
+            question={question}
+            number={state.index + 1}
+            total={Math.max(total, questions.length)}
+            answer={answer}
+            isLast={isLast}
+            onAnswer={(value) => dispatch({ type: 'answer', question, value })}
+            onNext={() => dispatch({ type: 'next' })}
+          />
+        ) : (
+          !complete && <WaitingCard key="waiting" />
+        )}
       </AnimatePresence>
     </section>
   )

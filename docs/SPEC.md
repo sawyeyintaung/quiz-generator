@@ -243,18 +243,18 @@ calling the AI again.
 
 ## Tech stack
 
-| Layer             | Choice                                                                               |
-| ----------------- | ------------------------------------------------------------------------------------ |
-| Build / framework | Vite + React + TypeScript                                                            |
-| Routing           | React Router                                                                         |
-| Styling           | Tailwind CSS                                                                         |
-| Animation         | Framer Motion + canvas-confetti                                                      |
-| AI                | Vercel AI SDK provider packages (Anthropic, OpenAI, Google), called from the browser |
-| Validation        | Zod                                                                                  |
-| Parsing           | pdf.js (`pdfjs-dist`), `mammoth`                                                     |
-| Storage           | Dexie (IndexedDB) for history; local/sessionStorage for settings and key             |
-| Testing           | Vitest + React Testing Library; Playwright for a few end-to-end flows                |
-| Hosting           | Static host (Vercel / Netlify / GitHub Pages)                                        |
+| Layer             | Choice                                                                                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Build / framework | Vite + React + TypeScript                                                                                                                        |
+| Routing           | React Router                                                                                                                                     |
+| Styling           | Tailwind CSS                                                                                                                                     |
+| Animation         | Framer Motion + canvas-confetti                                                                                                                  |
+| AI                | Official SDKs (`@anthropic-ai/sdk`, `openai`, `@google/genai`) behind one small app interface, lazy-loaded per provider, called from the browser |
+| Validation        | Zod                                                                                                                                              |
+| Parsing           | pdf.js (`pdfjs-dist`), `mammoth`                                                                                                                 |
+| Storage           | Dexie (IndexedDB) for history; local/sessionStorage for settings and key                                                                         |
+| Testing           | Vitest + React Testing Library; Playwright for a few end-to-end flows                                                                            |
+| Hosting           | Static host (Vercel / Netlify / GitHub Pages)                                                                                                    |
 
 ## Out of scope for v1
 

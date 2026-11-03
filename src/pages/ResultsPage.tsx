@@ -46,7 +46,7 @@ export function ResultsPage() {
     )
   }
 
-  const { quiz, answers, bestStreak } = results
+  const { quiz, answers, bestStreak, note } = results
   const missed = answers
     .filter((a) => !a.correct)
     .map((a) => ({ answer: a, question: quiz.questions.find((q) => q.id === a.questionId) }))
@@ -66,6 +66,7 @@ export function ResultsPage() {
       >
         <p className="text-muted text-sm font-medium">{quiz.title}</p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight">Results</h1>
+        {note && <p className="text-muted mt-2 max-w-md text-sm">{note}</p>}
         <div className="mt-6">
           <ScoreRing correct={correct} total={total} />
         </div>
