@@ -17,7 +17,7 @@ const q3 = mc(3, 'What shape are shield volcanoes?', 'Broad and gentle', ['Tall'
 const wrap = (...qs: string[]) => `{"title": "Volcano Quiz", "questions": [${qs.join(',')}]}`
 
 describe('parsePastedReply', () => {
-  it('reads a fenced JSON block surrounded by commentary (Claude Code / chat style)', () => {
+  it('reads a fenced JSON block surrounded by commentary (chat app style)', () => {
     const reply = `Here is your quiz:\n\n\`\`\`json\n${wrap(q1, q2, q3)}\n\`\`\`\n\nGood luck!`
     const r = parsePastedReply(reply, req)
     expect(r.title).toBe('Volcano Quiz')

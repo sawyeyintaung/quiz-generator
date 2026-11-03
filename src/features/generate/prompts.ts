@@ -119,7 +119,7 @@ const TF_EXAMPLE = '{"type": "true_false", "prompt": "...", "answer": true, "exp
 
 /**
  * One self-contained prompt for copy & paste mode: the learner pastes it into
- * Claude Code, claude.ai or ChatGPT and pastes the JSON reply back into the app.
+ * Claude, ChatGPT or Gemini and pastes the JSON reply back into the app.
  */
 export function pastePrompt(req: GenerationRequest): string {
   const examples = req.types.map((t) => (t === 'multiple_choice' ? MC_EXAMPLE : TF_EXAMPLE))

@@ -3,7 +3,7 @@ import { providerIds, providers } from '../ai/providers.ts'
 import type { ProviderId } from '../ai/types.ts'
 
 /** 'api': call an AI provider with the user's key. 'paste': copy instructions into
- *  Claude Code / claude.ai / ChatGPT and paste the reply back (uses the user's subscription). */
+ *  Claude / ChatGPT / Gemini and paste the reply back (uses the user's subscription). */
 export type GenerationMode = 'api' | 'paste'
 
 export type Settings = {
@@ -23,7 +23,8 @@ const PREFS_KEY = 'qg.settings.v1'
 const KEYS_KEY = 'qg.apiKeys.v1'
 
 const defaultSettings: Settings = {
-  mode: 'api',
+  // Copy & paste with the learner's own subscription is the default: no API key needed.
+  mode: 'paste',
   provider: 'anthropic',
   models: Object.fromEntries(providerIds.map((id) => [id, providers[id].defaultModel])) as Record<
     ProviderId,
@@ -79,7 +80,7 @@ function load(): Settings {
     if (typeof m === 'string' && m) models[id] = m
   }
   return {
-    mode: prefs?.mode === 'paste' ? 'paste' : 'api',
+    mode: prefs?.mode === 'api' ? 'api' : 'paste',
     provider: isProvider(prefs?.provider) ? prefs.provider : defaultSettings.provider,
     models,
     rememberKeys,

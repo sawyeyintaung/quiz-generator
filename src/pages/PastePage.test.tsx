@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -21,8 +21,8 @@ describe('copy & paste mode', () => {
     const router = createMemoryRouter(routes, { initialEntries: ['/'] })
     render(<RouterProvider router={router} />)
 
-    // No API key: choose the subscription option instead.
-    await user.click(screen.getByRole('button', { name: /Use my subscription/ }))
+    // Copy & paste with a subscription is the default: no API key or setup needed.
+    expect(screen.getByText(/Copy & paste with your subscription/)).toBeInTheDocument()
     await user.type(screen.getByLabelText('What do you want to be quizzed on?'), 'Volcanoes')
     await user.click(screen.getByRole('button', { name: /Get instructions/ }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/paste'))
@@ -70,5 +70,45 @@ describe('copy & paste mode', () => {
     )
     await user.click(screen.getByRole('button', { name: /Start quiz/ }))
     expect(screen.getByRole('alert')).toHaveTextContent(/couldn't find any quiz questions/)
+  })
+
+  it('offers Claude (default), ChatGPT and Gemini', async () => {
+    const user = userEvent.setup()
+    const router = createMemoryRouter(routes, {
+      initialEntries: [
+        {
+          pathname: '/paste',
+          state: {
+            request: {
+              source: { kind: 'topic', text: 'Volcanoes' },
+              count: 5,
+              difficulty: 'easy',
+              types: ['multiple_choice'],
+            },
+          },
+        },
+      ],
+    })
+    render(<RouterProvider router={router} />)
+    const group = await screen.findByRole('group', { name: 'AI app' })
+    const names = within(group)
+      .getAllByRole('button')
+      .map((b) => b.textContent)
+    expect(names).toEqual(['Claude', 'ChatGPT', 'Gemini'])
+    expect(within(group).getByRole('button', { name: 'Claude' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('link', { name: 'claude.ai' })).toHaveAttribute(
+      'href',
+      'https://claude.ai/new',
+    )
+
+    await user.click(within(group).getByRole('button', { name: 'Gemini' }))
+    expect(screen.getByRole('link', { name: 'gemini.google.com' })).toHaveAttribute(
+      'href',
+      'https://gemini.google.com/app',
+    )
+    expect(screen.queryByText(/Claude Code/)).not.toBeInTheDocument()
   })
 })

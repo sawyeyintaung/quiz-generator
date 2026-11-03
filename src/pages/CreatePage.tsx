@@ -240,8 +240,8 @@ export function CreatePage() {
           >
             <h2 className="font-display font-bold">How do you want to create quizzes?</h2>
             <p className="text-muted mt-1 text-sm">
-              Add your own API key from Anthropic, OpenAI or Google, or use your Claude Code, Claude
-              or ChatGPT subscription by copying and pasting.
+              Add your own API key from Anthropic, OpenAI or Google, or use your Claude, ChatGPT or
+              Gemini subscription by copying and pasting.
             </p>
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
               <Link

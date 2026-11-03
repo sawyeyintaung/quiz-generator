@@ -26,6 +26,7 @@ beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
   resetSettingsForTests()
+  updateSettings({ mode: 'api' }) // these tests cover the API-key path
   resetDraftForTests()
   clearSuggestionCacheForTests()
 })

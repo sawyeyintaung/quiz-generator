@@ -15,6 +15,13 @@ beforeEach(() => {
 })
 
 describe('settings store', () => {
+  it('starts in copy & paste mode (no API key needed)', () => {
+    expect(getSettings().mode).toBe('paste')
+    updateSettings({ mode: 'api' })
+    resetSettingsForTests()
+    expect(getSettings().mode).toBe('api') // a chosen mode is remembered
+  })
+
   it('keeps keys in sessionStorage by default, never localStorage', () => {
     setApiKey('anthropic', '  sk-ant-test  ')
     expect(sessionStorage.getItem('qg.apiKeys.v1')).toContain('sk-ant-test')

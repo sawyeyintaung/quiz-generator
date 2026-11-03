@@ -14,8 +14,8 @@ no account and no backend.
 - **Two ways to generate:**
   - **API key** (Anthropic, OpenAI or Google): questions stream in and you can start
     answering straight away. The key stays in your browser and is sent only to that provider.
-  - **Copy & paste with your subscription:** copy the app's instructions into Claude Code,
-    claude.ai or ChatGPT, then paste the reply back. No API key needed.
+  - **Copy & paste with your subscription:** copy the app's instructions into Claude,
+    ChatGPT or Gemini, then paste the reply back. No API key needed.
 - **Quality checks:** the AI plans distinct ideas first, every question is validated, options
   are shuffled, near-duplicates are removed, and short sources get fewer questions instead of
   repeats.

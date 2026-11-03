@@ -14,10 +14,16 @@ import { useDocumentTitle } from '../lib/useDocumentTitle.ts'
 
 export type PastePageState = { request: GenerationRequest }
 
-type Target = 'claude-code' | 'claude' | 'chatgpt'
+/** Chat apps the learner can paste into. Claude is the default. */
+const aiApps = [
+  { id: 'claude', name: 'Claude', host: 'claude.ai', url: 'https://claude.ai/new' },
+  { id: 'chatgpt', name: 'ChatGPT', host: 'chatgpt.com', url: 'https://chatgpt.com/' },
+  { id: 'gemini', name: 'Gemini', host: 'gemini.google.com', url: 'https://gemini.google.com/app' },
+] as const
+
+type Target = (typeof aiApps)[number]['id']
 
 const PROMPT_FILE = 'quiz-prompt.txt'
-const CLI_COMMAND = `claude -p "$(cat ~/Downloads/${PROMPT_FILE})"`
 
 function readState(value: unknown): PastePageState | undefined {
   const v = value as Partial<PastePageState> | null
@@ -50,7 +56,8 @@ export function PastePage() {
 function PasteFlow({ request }: { request: GenerationRequest }) {
   const navigate = useNavigate()
   const prompt = useMemo(() => pastePrompt(request), [request])
-  const [target, setTarget] = useState<Target>('claude-code')
+  const [target, setTarget] = useState<Target>('claude')
+  const selectedApp = aiApps.find((a) => a.id === target) ?? aiApps[0]
   const [reply, setReply] = useState('')
   const [error, setError] = useState<string>()
   const previewRef = useRef<HTMLDetailsElement>(null)
@@ -120,8 +127,8 @@ function PasteFlow({ request }: { request: GenerationRequest }) {
     >
       <h1 className="text-3xl font-bold tracking-tight">Create with your subscription</h1>
       <p className="text-muted mt-2">
-        Copy the instructions into Claude Code, Claude or ChatGPT, then paste the reply back here.
-        No API key needed: it uses your own plan.
+        Copy the instructions into Claude, ChatGPT or Gemini, then paste the reply back here. No API
+        key needed: it uses your own plan.
       </p>
 
       <ol className="mt-6 space-y-4">
@@ -161,89 +168,35 @@ function PasteFlow({ request }: { request: GenerationRequest }) {
             <h2 className="font-semibold">Paste them into your AI app</h2>
           </div>
           <div role="group" aria-label="AI app" className="mt-4 flex flex-wrap gap-2">
-            {(
-              [
-                ['claude-code', 'Claude Code'],
-                ['claude', 'Claude'],
-                ['chatgpt', 'ChatGPT'],
-              ] as const
-            ).map(([id, label]) => (
+            {aiApps.map((app) => (
               <button
-                key={id}
+                key={app.id}
                 type="button"
-                aria-pressed={target === id}
-                onClick={() => setTarget(id)}
+                aria-pressed={target === app.id}
+                onClick={() => setTarget(app.id)}
                 className={`rounded-full border-2 px-4 py-1.5 text-sm font-medium ${
-                  target === id ? 'border-brand bg-brand/10 text-brand' : 'border-border text-muted'
+                  target === app.id
+                    ? 'border-brand bg-brand/10 text-brand'
+                    : 'border-border text-muted'
                 }`}
               >
-                {label}
+                {app.name}
               </button>
             ))}
           </div>
-          <div className="mt-4 text-sm leading-relaxed">
-            {target === 'claude-code' && (
-              <>
-                <p>
-                  Open Claude Code (in your terminal, the desktop app or{' '}
-                  <a
-                    href="https://claude.ai/code"
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="text-brand underline"
-                  >
-                    claude.ai/code
-                  </a>
-                  ), paste the instructions and press Enter. Then copy Claude&apos;s whole reply.
-                </p>
-                <p className="text-muted mt-3">
-                  Prefer one command? Download the file above, then run this in your terminal
-                  (macOS/Linux). Add <code className="bg-bg rounded px-1">| pbcopy</code> on macOS
-                  to copy the reply automatically.
-                </p>
-                <div className="bg-bg border-border mt-2 flex items-center gap-2 rounded-xl border p-2 pl-3">
-                  <code className="min-w-0 flex-1 overflow-x-auto font-mono text-xs whitespace-nowrap">
-                    {CLI_COMMAND}
-                  </code>
-                  <CopyButton
-                    text={CLI_COMMAND}
-                    label="Copy"
-                    className="border-border hover:border-brand shrink-0 rounded-lg border-2 px-3 py-1 text-xs font-semibold"
-                  />
-                </div>
-              </>
-            )}
-            {target === 'claude' && (
-              <p>
-                Open a new chat at{' '}
-                <a
-                  href="https://claude.ai/new"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="text-brand underline"
-                >
-                  claude.ai
-                </a>
-                , paste the instructions and send. Use the copy button on the code block in the
-                reply.
-              </p>
-            )}
-            {target === 'chatgpt' && (
-              <p>
-                Open a new chat at{' '}
-                <a
-                  href="https://chatgpt.com/"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="text-brand underline"
-                >
-                  chatgpt.com
-                </a>
-                , paste the instructions and send. Use the copy button on the code block in the
-                reply.
-              </p>
-            )}
-          </div>
+          <p className="mt-4 text-sm leading-relaxed">
+            Open a new chat at{' '}
+            <a
+              href={selectedApp.url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="text-brand underline"
+            >
+              {selectedApp.host}
+            </a>
+            , paste the instructions and send. Then use the copy button on the code block in the
+            reply.
+          </p>
         </li>
 
         <li className={step}>

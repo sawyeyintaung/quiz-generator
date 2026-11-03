@@ -5,7 +5,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { routes } from '../app/routes.tsx'
 import { resetDraftForTests } from '../features/create/draft.ts'
 import { setClientFactoryForTests } from '../features/generate/generationStore.ts'
-import { resetSettingsForTests, setApiKey } from '../features/settings/settingsStore.ts'
+import {
+  resetSettingsForTests,
+  setApiKey,
+  updateSettings,
+} from '../features/settings/settingsStore.ts'
 import { fakeClient, mc, tf } from '../test/fakeClient.ts'
 
 function renderAt(path: string) {
@@ -18,6 +22,7 @@ beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
   resetSettingsForTests()
+  updateSettings({ mode: 'api' }) // these tests cover the API-key path
   resetDraftForTests()
 })
 afterEach(() => setClientFactoryForTests())

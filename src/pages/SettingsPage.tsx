@@ -80,14 +80,14 @@ export function SettingsPage() {
           {(
             [
               [
+                'paste',
+                'Copy & paste with my subscription (default)',
+                'Use Claude, ChatGPT or Gemini. No API key needed.',
+              ],
+              [
                 'api',
                 'Automatic, with an API key',
                 'Fastest: questions stream in. Uses API credit.',
-              ],
-              [
-                'paste',
-                'Copy & paste with my subscription',
-                'Use Claude Code, Claude or ChatGPT. No API key needed.',
               ],
             ] as const
           ).map(([mode, title, hint]) => {
@@ -123,7 +123,7 @@ export function SettingsPage() {
           <ol className="text-muted mt-2 list-decimal space-y-1 pl-5 text-sm">
             <li>On the Create page, choose your topic or notes and settings.</li>
             <li>Copy the instructions the app writes for you.</li>
-            <li>Paste them into Claude Code, claude.ai or ChatGPT.</li>
+            <li>Paste them into Claude, ChatGPT or Gemini.</li>
             <li>Paste the reply back. The app checks it and starts your quiz.</li>
           </ol>
           <p className="text-muted mt-3 text-sm">

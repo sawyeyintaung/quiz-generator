@@ -56,7 +56,7 @@ function extract(text: string): { title?: string; items: unknown[] } {
 }
 
 /**
- * Reads a reply pasted from Claude Code, claude.ai or ChatGPT. Accepts a JSON object
+ * Reads a reply pasted from Claude, ChatGPT or Gemini. Accepts a JSON object
  * with `questions`, a bare array, or JSON Lines, with or without code fences and
  * surrounding commentary. Every question gets the same checks as API-generated ones.
  */

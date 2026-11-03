@@ -30,9 +30,11 @@ describe('app routes', () => {
 
     await user.click(within(nav).getByRole('link', { name: 'History' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/history'))
-    expect(within(nav).getByRole('link', { name: 'History' })).toHaveAttribute(
-      'aria-current',
-      'page',
+    await waitFor(() =>
+      expect(within(nav).getByRole('link', { name: 'History' })).toHaveAttribute(
+        'aria-current',
+        'page',
+      ),
     )
   })
 })
