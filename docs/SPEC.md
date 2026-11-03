@@ -48,6 +48,16 @@ Why: the API key never touches a server of ours, there is no server for anyone t
 Extracted text is trimmed to a token budget before being sent to the model, which also
 protects the user's spend.
 
+## Narrowing the quiz scope
+- **"Focus on" field** (optional, ~150 chars, available for every source type), e.g.
+  "only the light reactions" or "chapter 3". The model picks key concepts only within that
+  focus; it is treated as subject matter, not as instructions.
+- **PDF page range:** after upload, show the page count and a from/to picker; only the selected
+  pages are extracted and sent (saves the user's tokens).
+- If the focus is missing or thin in the source, generate fewer questions and say why
+  ("Only 3 questions found about 'light reactions' in this document").
+- Later (not v1): section picker based on headings in DOCX / URL / pasted text.
+
 ## Quiz settings
 - Number of questions: 5 / 10 / 15 / 20
 - Difficulty: Easy / Medium / Hard
@@ -98,7 +108,7 @@ type Question =
 type Quiz = {
   id: string; title: string;
   source: { kind: "topic" | "text" | "file" | "url"; label: string }; // label only, not the content
-  settings: { count: number; difficulty: "easy" | "medium" | "hard"; types: Question["type"][] };
+  settings: { count: number; focus?: string; pageRange?: [number, number]; difficulty: "easy" | "medium" | "hard"; types: Question["type"][] };
   provider: string; model: string;
   questions: Question[]; createdAt: string;
 };
