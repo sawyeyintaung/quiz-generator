@@ -57,9 +57,15 @@ protects the user's spend.
 - If the focus is missing or thin in the source, generate fewer questions and say why
   ("Only 3 questions found about 'light reactions' in this document").
 - **Focus suggestions** (helps when the scope is big):
-  - Offered when the source is large (e.g. >20 PDF pages or >5,000 words) or the topic is
-    broad: "This is a big topic. Want suggestions to narrow it down?" Never called
-    automatically, since it spends the user's tokens. A "Suggest focus" button is always available.
+  - Shown **automatically** for both small and large sources once the source is ready
+    (topic typed with a short pause, text pasted, file parsed, URL loaded), if a key is set.
+  - **Skipped when the scope is too small** to split meaningfully (e.g. under ~300 words,
+    or the topic is already narrow); the AI may also return no suggestions, in which case
+    nothing is shown. This is expected, not an error.
+  - Cost control (it uses the user's tokens): fast/cheap model, condensed input, results cached
+    per source so the same source never triggers a second call, and a Settings toggle
+    "Auto-suggest focus areas" (on by default) to turn it off. A "Suggest focus" button
+    stays available when it is off.
   - Shows 4–8 options, each with a title, page range (PDF), and estimated number of unique
     questions, plus a "Whole source (overview)" option. Multi-select allowed.
   - Selecting fills the Focus field and page range; the user can still edit them.
