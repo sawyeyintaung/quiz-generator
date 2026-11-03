@@ -53,6 +53,27 @@ protects the user's spend.
 - Difficulty: Easy / Medium / Hard
 - Question types: Multiple choice, True/False (choose one or both)
 
+## Question quality: avoiding duplicates
+Duplicates usually happen when the requested count is larger than the number of distinct
+facts in the source. Three layers prevent it:
+
+1. **Count guidance (before generating):** estimate how many questions the source supports
+   (~1 per 60–80 words of source text). If the user picks more, show a warning such as
+   "This text is short; we recommend up to 5 questions." They may continue anyway.
+2. **Plan, then write (during generation):**
+   - Step 1: the model lists up to N *distinct* key concepts from the source, and must not
+     pad or repeat concepts to reach N.
+   - Step 2: one question per concept.
+   - If fewer concepts exist than requested, generate fewer and tell the user
+     ("Your source supports 6 unique questions"). Never more than N (extras are trimmed).
+   - Prompt rules: no rephrased repeats; a true/false question must not restate a
+     multiple-choice question's answer; each question tests a different fact.
+3. **Duplicate check in code (after each question arrives):** compare normalized question
+   text and correct-answer text against earlier questions with a local similarity measure
+   (word/trigram overlap, no extra AI cost). Too-similar questions are dropped and a
+   replacement is requested with the existing questions passed as an "avoid" list.
+   "Regenerate question" uses the same avoid list.
+
 ## Question format (validated with Zod)
 ```ts
 type Question =
