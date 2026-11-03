@@ -15,6 +15,15 @@ beforeEach(() => {
 })
 
 describe('settings store', () => {
+  it('replaces a saved model the provider has retired', () => {
+    localStorage.setItem(
+      'qg.settings.v1',
+      JSON.stringify({ models: { google: 'gemini-2.5-flash' } }),
+    )
+    resetSettingsForTests()
+    expect(getSettings().models.google).toBe('gemini-3.8-flash')
+  })
+
   it('starts in copy & paste mode (no API key needed)', () => {
     expect(getSettings().mode).toBe('paste')
     updateSettings({ mode: 'api' })

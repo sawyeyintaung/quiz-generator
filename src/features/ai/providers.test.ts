@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { pickDefaultModel } from './providers.ts'
+import { pickDefaultModel, suggestedReplacement } from './providers.ts'
 
 const m = (...ids: string[]) => ids.map((id) => ({ id, label: id }))
 
@@ -25,5 +25,28 @@ describe('pickDefaultModel', () => {
   it('falls back to the first model, or undefined for an empty list', () => {
     expect(pickDefaultModel('openai', m('o9'))).toBe('o9')
     expect(pickDefaultModel('openai', [])).toBeUndefined()
+  })
+})
+
+describe('retired and replacement models', () => {
+  const googleError =
+    'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use models/gemini-3.8-flash for the latest features and improvements.'
+
+  it('reads the replacement model from a provider error', () => {
+    expect(suggestedReplacement(googleError)).toBe('gemini-3.8-flash')
+    expect(suggestedReplacement('model not found')).toBeUndefined()
+    expect(suggestedReplacement(undefined)).toBeUndefined()
+  })
+
+  it('never picks a retired model, and prefers a newer fast model the key offers', () => {
+    expect(pickDefaultModel('google', m('gemini-2.5-flash', 'gemini-3.8-flash'))).toBe(
+      'gemini-3.8-flash',
+    )
+    expect(
+      pickDefaultModel('google', m('gemini-2.5-flash', 'gemini-3.8-flash', 'gemini-4.0-flash')),
+    ).toBe('gemini-4.0-flash')
+    expect(
+      pickDefaultModel('google', m('gemini-3.8-flash', 'gemini-4.0-flash-preview-11-2026')),
+    ).toBe('gemini-3.8-flash')
   })
 })

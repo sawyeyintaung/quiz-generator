@@ -110,9 +110,18 @@ type FailedProps = {
   /** e.g. a link to the provider's API billing page. */
   action?: { label: string; href: string }
   onRetry?: () => void
+  /** Label for the retry button, e.g. "Switch to gemini-3.8-flash and try again". */
+  retryLabel?: string
 }
 
-export function GenerationFailed({ title, message, detail, action, onRetry }: FailedProps) {
+export function GenerationFailed({
+  title,
+  message,
+  detail,
+  action,
+  onRetry,
+  retryLabel = 'Try again',
+}: FailedProps) {
   return (
     <section className="border-border bg-surface rounded-2xl border p-6 text-center sm:p-8">
       <h1 className="text-2xl font-bold">{title}</h1>
@@ -142,7 +151,7 @@ export function GenerationFailed({ title, message, detail, action, onRetry }: Fa
             onClick={onRetry}
             className="bg-accent hover:bg-accent-strong rounded-xl px-5 py-2.5 font-semibold text-white"
           >
-            Try again
+            {retryLabel}
           </button>
         )}
         <Link

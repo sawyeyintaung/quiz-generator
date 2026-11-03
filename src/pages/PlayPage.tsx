@@ -13,9 +13,10 @@ import {
   isFinished,
   jobToQuiz,
   retryGeneration,
+  startGeneration,
   useJob,
 } from '../features/generate/generationStore.ts'
-import { providers } from '../features/ai/providers.ts'
+import { providers, suggestedReplacement } from '../features/ai/providers.ts'
 import { newId } from '../lib/id.ts'
 import { useDocumentTitle } from '../lib/useDocumentTitle.ts'
 import { decodeQuizFromLink, ShareError } from '../features/share/shareFormat.ts'
@@ -23,7 +24,11 @@ import { demoQuiz } from '../features/quiz/demoQuiz.ts'
 import { readPlayState, type ResultsState } from '../features/quiz/navigation.ts'
 import type { Question, Quiz } from '../features/quiz/schema.ts'
 import { answerFor, createSession, score, sessionReducer } from '../features/quiz/session.ts'
-import { activeCredentials, useSettings } from '../features/settings/settingsStore.ts'
+import {
+  activeCredentials,
+  updateSettings,
+  useSettings,
+} from '../features/settings/settingsStore.ts'
 
 export function PlayPage() {
   const location = useLocation()
@@ -113,11 +118,25 @@ function GeneratedPlay({ jobId }: { jobId: string }) {
     )
   }
 
+  // The provider may say a model is retired and name its replacement: offer to switch.
+  const replacement =
+    job.error?.kind === 'model' ? suggestedReplacement(job.error.detail) : undefined
+  const switchModel = replacement && replacement !== job.model ? replacement : undefined
+
   const retry = () => {
-    const apiKey = activeCredentials(settings)?.apiKey ?? settings.keys[job.provider]
-    const id = apiKey ? retryGeneration(job.id, apiKey) : undefined
+    const apiKey = settings.keys[job.provider] ?? activeCredentials(settings)?.apiKey
+    if (!apiKey) {
+      navigate('/settings')
+      return
+    }
+    let id: string | undefined
+    if (switchModel) {
+      updateSettings((s) => ({ models: { ...s.models, [job.provider]: switchModel } }))
+      id = startGeneration(job.request, { provider: job.provider, apiKey, model: switchModel })
+    } else {
+      id = retryGeneration(job.id, apiKey)
+    }
     if (id) navigate(`/play?job=${id}`, { replace: true })
-    else navigate('/settings')
   }
 
   if (job.questions.length === 0) {
@@ -136,6 +155,7 @@ function GeneratedPlay({ jobId }: { jobId: string }) {
               : undefined
           }
           onRetry={retry}
+          retryLabel={switchModel ? `Switch to ${switchModel} and try again` : undefined}
         />
       )
     }

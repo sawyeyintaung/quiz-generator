@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { providerIds, providers } from '../ai/providers.ts'
+import { isRetired, providerIds, providers } from '../ai/providers.ts'
 import type { ProviderId } from '../ai/types.ts'
 
 /** 'api': call an AI provider with the user's key. 'paste': copy instructions into
@@ -77,7 +77,8 @@ function load(): Settings {
   const models = { ...defaultSettings.models }
   for (const id of providerIds) {
     const m = prefs?.models?.[id]
-    if (typeof m === 'string' && m) models[id] = m
+    // A retired model would only fail: fall back to the provider's current default.
+    if (typeof m === 'string' && m && !isRetired(id, m)) models[id] = m
   }
   return {
     mode: prefs?.mode === 'api' ? 'api' : 'paste',

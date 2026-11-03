@@ -6,6 +6,7 @@ import { routes } from '../app/routes.tsx'
 import { resetDraftForTests } from '../features/create/draft.ts'
 import { setClientFactoryForTests } from '../features/generate/generationStore.ts'
 import {
+  getSettings,
   resetSettingsForTests,
   setApiKey,
   updateSettings,
@@ -127,5 +128,41 @@ describe('creating a quiz', () => {
       'href',
       'https://console.anthropic.com/settings/billing',
     )
+  })
+
+  it('offers to switch to the replacement when a model is retired', async () => {
+    setApiKey('google', 'AIza-test')
+    updateSettings({ provider: 'google' })
+    const retired = fakeClient({
+      plan: Object.assign(
+        new Error(
+          'This model models/gemini-3.8-flash is no longer available to new users. Please update your code to use models/gemini-4.0-flash for the latest features and improvements.',
+        ),
+        { status: 404 },
+      ),
+      streams: [],
+    })
+    const working = fakeClient({
+      plan: { title: 'Volcanoes', concepts: ['Lava'] },
+      streams: [
+        [mc(1, 'What is magma called at the surface?', 'Lava', ['Ash', 'Basalt', 'Pumice'])],
+      ],
+    })
+    const usedModels: string[] = []
+    setClientFactoryForTests(async (c) => {
+      usedModels.push(c.model)
+      return c.model === 'gemini-4.0-flash' ? working.client : retired.client
+    })
+
+    const user = userEvent.setup()
+    renderAt('/')
+    await user.type(screen.getByLabelText('What do you want to be quizzed on?'), 'Volcanoes')
+    await user.click(screen.getByRole('button', { name: /Generate quiz/ }))
+    await user.click(
+      await screen.findByRole('button', { name: 'Switch to gemini-4.0-flash and try again' }),
+    )
+    expect(await screen.findByRole('heading', { name: /magma called/ })).toBeInTheDocument()
+    expect(usedModels).toEqual(['gemini-3.8-flash', 'gemini-4.0-flash'])
+    expect(getSettings().models.google).toBe('gemini-4.0-flash') // remembered for next time
   })
 })

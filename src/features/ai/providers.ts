@@ -32,28 +32,53 @@ export const providers: Record<ProviderId, ProviderInfo> = {
     keyUrl: 'https://aistudio.google.com/apikey',
     billingUrl: 'https://aistudio.google.com/usage',
     keyPlaceholder: 'AIza...',
-    defaultModel: 'gemini-2.5-flash',
-    fallbackModels: [{ id: 'gemini-2.5-flash', label: 'gemini-2.5-flash' }],
+    defaultModel: 'gemini-3.8-flash',
+    fallbackModels: [{ id: 'gemini-3.8-flash', label: 'gemini-3.8-flash' }],
   },
 }
 
 export const providerIds = Object.keys(providers) as ProviderId[]
 
 /**
+ * Models the providers have retired (at least for new users). A saved choice of one of
+ * these is replaced by the provider's default, and they are never picked automatically.
+ */
+export const retiredModels: Record<ProviderId, string[]> = {
+  anthropic: [],
+  openai: [],
+  google: ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'],
+}
+
+export const isRetired = (provider: ProviderId, model: string) =>
+  retiredModels[provider].includes(model)
+
+/**
  * Chooses a sensible default from the models a key can actually use:
  * the preferred model if listed, otherwise the newest-looking fast/cheap one.
  */
 export function pickDefaultModel(provider: ProviderId, models: ModelOption[]): string | undefined {
-  const ids = models.map((m) => m.id)
+  const ids = models.map((m) => m.id).filter((id) => !isRetired(provider, id))
   const preferred = providers[provider].defaultModel
-  if (ids.includes(preferred)) return preferred
   const cheap: Record<ProviderId, RegExp> = {
     anthropic: /haiku/,
     openai: /mini/,
     google: /flash(?!.*(lite|image|tts|live|audio))/,
   }
-  const candidates = ids.filter((id) => cheap[provider].test(id)).sort(compareVersionsDesc)
-  return candidates[0] ?? ids[0]
+  const matching = ids.filter((id) => cheap[provider].test(id))
+  // Prefer stable releases over previews/experiments when there is a choice.
+  const stable = matching.filter((id) => !/preview|exp/.test(id))
+  const candidates = (stable.length ? stable : matching).sort(compareVersionsDesc)
+  const newest = candidates[0]
+  // Use our preferred model unless the key offers a newer fast model.
+  if (ids.includes(preferred) && (!newest || compareVersionsDesc(newest, preferred) >= 0)) {
+    return preferred
+  }
+  return newest ?? ids[0]
+}
+
+/** If a provider's error names a replacement model ("use models/x"), returns it. */
+export function suggestedReplacement(detail: string | undefined): string | undefined {
+  return detail?.match(/use (?:models\/)?([a-z0-9][a-z0-9.-]*[a-z0-9])\b/i)?.[1]
 }
 
 /** Sorts ids so higher embedded version numbers come first (e.g. "x-3-0" before "x-2-5"). */
