@@ -26,6 +26,9 @@ export function resolvedTheme(pref = preference): Theme {
 /** Applies the theme to <html>: CSS tokens, native form controls and the browser UI colour. */
 export function applyTheme() {
   const root = document.documentElement
+  // Hover/press colour transitions would make some elements fade to the new theme while the
+  // rest switch instantly. Pause CSS transitions so every colour changes in the same frame.
+  root.classList.add('theme-switching')
   const theme = resolvedTheme()
   if (preference === 'system') root.removeAttribute('data-theme')
   else root.dataset.theme = preference
@@ -33,6 +36,9 @@ export function applyTheme() {
   document
     .querySelector('meta[name="theme-color"]')
     ?.setAttribute('content', theme === 'dark' ? '#0f0f1a' : '#5a36f0')
+  // Commit the new colours with transitions off, then turn transitions back on.
+  void getComputedStyle(root).backgroundColor
+  requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove('theme-switching')))
 }
 
 export function setThemePreference(next: ThemePreference) {
