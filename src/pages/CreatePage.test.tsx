@@ -98,5 +98,28 @@ describe('creating a quiz', () => {
     await user.click(screen.getByRole('button', { name: /Generate quiz/ }))
     expect(await screen.findByRole('alert')).toHaveTextContent(/API key was rejected/)
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+    expect(screen.getByText('invalid x-api-key')).toBeInTheDocument()
+  })
+
+  it('explains an empty API balance and links to billing', async () => {
+    setApiKey('anthropic', 'sk-ant-empty')
+    const { client } = fakeClient({
+      plan: Object.assign(
+        new Error('Your credit balance is too low to access the Anthropic API.'),
+        { status: 400 },
+      ),
+      streams: [],
+    })
+    setClientFactoryForTests(async () => client)
+
+    const user = userEvent.setup()
+    renderAt('/')
+    await user.type(screen.getByLabelText('What do you want to be quizzed on?'), 'Volcanoes')
+    await user.click(screen.getByRole('button', { name: /Generate quiz/ }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/billed separately from Claude/)
+    expect(screen.getByRole('link', { name: 'Open Anthropic API billing' })).toHaveAttribute(
+      'href',
+      'https://console.anthropic.com/settings/billing',
+    )
   })
 })

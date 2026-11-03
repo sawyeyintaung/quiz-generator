@@ -11,6 +11,13 @@ describe('toAiError', () => {
     [apiError(429, 'You exceeded your current quota', 'insufficient_quota'), 'quota'],
     [apiError(400, 'Your credit balance is too low'), 'quota'],
     [apiError(429, 'Rate limit reached'), 'rate_limit'],
+    [
+      apiError(
+        429,
+        'RESOURCE_EXHAUSTED: You exceeded your current quota, please check your plan and billing details.',
+      ),
+      'rate_limit',
+    ],
     [apiError(404, 'model: foo'), 'model'],
     [apiError(529, 'Overloaded'), 'overloaded'],
     [new TypeError('Failed to fetch'), 'network'],

@@ -6,6 +6,7 @@ export const providers: Record<ProviderId, ProviderInfo> = {
     name: 'Claude',
     company: 'Anthropic',
     keyUrl: 'https://console.anthropic.com/settings/keys',
+    billingUrl: 'https://console.anthropic.com/settings/billing',
     keyPlaceholder: 'sk-ant-...',
     defaultModel: 'claude-haiku-5-5',
     fallbackModels: [
@@ -19,6 +20,7 @@ export const providers: Record<ProviderId, ProviderInfo> = {
     name: 'GPT',
     company: 'OpenAI',
     keyUrl: 'https://platform.openai.com/api-keys',
+    billingUrl: 'https://platform.openai.com/settings/organization/billing',
     keyPlaceholder: 'sk-...',
     defaultModel: 'gpt-5-mini',
     fallbackModels: [{ id: 'gpt-5-mini', label: 'gpt-5-mini' }],
@@ -28,6 +30,7 @@ export const providers: Record<ProviderId, ProviderInfo> = {
     name: 'Gemini',
     company: 'Google',
     keyUrl: 'https://aistudio.google.com/apikey',
+    billingUrl: 'https://aistudio.google.com/usage',
     keyPlaceholder: 'AIza...',
     defaultModel: 'gemini-2.5-flash',
     fallbackModels: [{ id: 'gemini-2.5-flash', label: 'gemini-2.5-flash' }],

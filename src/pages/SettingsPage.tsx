@@ -120,7 +120,8 @@ export function SettingsPage() {
           >
             Get an API key from {provider.company}
           </a>
-          . Usage is billed to your {provider.company} account.
+          . Usage is billed to your {provider.company} API account, which is separate from any
+          Claude, ChatGPT or Gemini subscription and needs its own credit.
         </p>
         <div className="mt-3 flex gap-2">
           <input
@@ -156,11 +157,16 @@ export function SettingsPage() {
           <p role="status" className="text-sm">
             {test.status === 'ok' && (
               <span className="text-correct font-medium">
-                ✓ Key works.
+                ✓ Key is valid.
                 {test.count > 0 && ` ${test.count} model${test.count === 1 ? '' : 's'} available.`}
               </span>
             )}
             {test.status === 'error' && <span className="text-wrong">{test.message}</span>}
+            {test.status === 'ok' && (
+              <span className="text-muted block text-xs">
+                This checks the key only; it doesn&apos;t use or check your API credit.
+              </span>
+            )}
             {test.status === 'idle' && savedKey && draftKey.trim() === savedKey && (
               <span className="text-muted">Key saved.</span>
             )}

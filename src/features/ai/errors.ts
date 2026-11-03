@@ -15,8 +15,9 @@ export type AiErrorKind =
 const messages: Record<AiErrorKind, string> = {
   auth: 'Your API key was rejected. Check that it is correct and active in Settings.',
   quota:
-    'Your API account has no remaining credit or quota. Add billing with your provider and try again.',
-  rate_limit: 'Your provider is rate-limiting requests right now. Wait a moment and try again.',
+    "Your API account has no remaining credit. API usage is billed separately from Claude, ChatGPT or Gemini subscriptions, so add credit on your provider's API billing page and try again.",
+  rate_limit:
+    "You've hit your provider's rate limit or usage quota. Wait a minute and try again. If it keeps happening, check your plan's limits with your provider.",
   model: 'This model is not available for your API key. Pick another model in Settings.',
   overloaded: 'The AI provider is busy or having problems. Try again in a minute.',
   network:
@@ -66,7 +67,9 @@ export function toAiError(error: unknown): AiError {
     return new AiError('auth', detail)
   }
   if (status === 400 && /api[ _]?key/.test(text)) return new AiError('auth', detail)
-  if (status === 402 || /insufficient_quota|quota|credit balance|billing/.test(text)) {
+  // Only clear "out of credit" signals. A plain 429 that mentions "quota" (e.g. Gemini's
+  // per-minute free-tier limits) is a temporary rate limit, not an empty balance.
+  if (status === 402 || /insufficient_quota|credit balance/.test(text)) {
     return new AiError('quota', detail)
   }
   if (status === 429) return new AiError('rate_limit', detail)

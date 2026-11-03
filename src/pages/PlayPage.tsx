@@ -15,6 +15,7 @@ import {
   retryGeneration,
   useJob,
 } from '../features/generate/generationStore.ts'
+import { providers } from '../features/ai/providers.ts'
 import { demoQuiz } from '../features/quiz/demoQuiz.ts'
 import { readPlayState, type ResultsState } from '../features/quiz/navigation.ts'
 import type { Question, Quiz } from '../features/quiz/schema.ts'
@@ -87,7 +88,16 @@ function GeneratedPlay({ jobId }: { jobId: string }) {
       return (
         <GenerationFailed
           title="Couldn't create your quiz"
-          message={job.error ?? ''}
+          message={job.error?.message ?? ''}
+          detail={job.error?.detail}
+          action={
+            job.error?.kind === 'quota'
+              ? {
+                  label: `Open ${providers[job.provider].company} API billing`,
+                  href: providers[job.provider].billingUrl,
+                }
+              : undefined
+          }
           onRetry={retry}
         />
       )

@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { createAiClient } from '../ai/createClient.ts'
-import { toAiError } from '../ai/errors.ts'
+import { toAiError, type AiErrorKind } from '../ai/errors.ts'
 import type { AiClient, ProviderId } from '../ai/types.ts'
 import type { Question, Quiz } from '../quiz/schema.ts'
 import { generateQuiz } from './generateQuiz.ts'
@@ -20,7 +20,7 @@ export type GenerationJob = {
   plannedCount?: number
   questions: Question[]
   note?: string
-  error?: string
+  error?: { kind: AiErrorKind; message: string; detail?: string }
   createdAt: string
 }
 
@@ -93,7 +93,10 @@ async function run(
   } catch (error) {
     if (signal.aborted) return
     const aiError = toAiError(error)
-    update(id, { status: 'error', error: aiError.message })
+    update(id, {
+      status: 'error',
+      error: { kind: aiError.kind, message: aiError.message, detail: aiError.detail },
+    })
   } finally {
     controllers.delete(id)
   }

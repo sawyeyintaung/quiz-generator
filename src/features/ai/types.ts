@@ -9,6 +9,8 @@ export type ProviderInfo = {
   name: string
   company: string
   keyUrl: string
+  /** Where API credit is added (API billing is separate from chat subscriptions). */
+  billingUrl: string
   keyPlaceholder: string
   /** Preferred fast, low-cost model, used when it is available for the key. */
   defaultModel: string
