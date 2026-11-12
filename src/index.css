@@ -1,0 +1,91 @@
+@import 'tailwindcss';
+
+/* Design tokens. Use as Tailwind utilities, e.g. bg-surface, text-muted, bg-brand. */
+@theme {
+  /* Darker than the accent so brand-coloured text on tinted backgrounds stays >= 4.5:1. */
+  --color-brand: #5a36f0;
+  /* Filled buttons with white text: same in both themes to keep >= 4.5:1 contrast. */
+  --color-accent: #5a36f0;
+  --color-accent-strong: #4320d6;
+  /* Logo tile and the amber "spark" (the right answer, AI, streaks). */
+  --color-logo: #5a36f0;
+  --color-spark: #ffc24b;
+  /* Dark enough to use as text on white or tinted backgrounds (>= 4.5:1). */
+  --color-correct: #15803d;
+  --color-wrong: #b91c1c;
+
+  --color-bg: #f7f7fb;
+  --color-surface: #ffffff;
+  --color-border: #e4e4ee;
+  --color-text: #17172a;
+  --color-muted: #5f5f78;
+
+  --font-sans:
+    'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    sans-serif;
+  --font-display: 'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Dark theme: when chosen in the app, or when the device is dark and nothing else was chosen. */
+:root[data-theme='dark'] {
+  --color-brand: #a592ff;
+  --color-logo: #8f75ff;
+  --color-correct: #22c55e;
+  --color-wrong: #f87171;
+
+  --color-bg: #0f0f1a;
+  --color-surface: #191928;
+  --color-border: #2c2c42;
+  --color-text: #ececf6;
+  --color-muted: #a3a3bd;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-brand: #a592ff;
+    --color-logo: #8f75ff;
+    --color-correct: #22c55e;
+    --color-wrong: #f87171;
+
+    --color-bg: #0f0f1a;
+    --color-surface: #191928;
+    --color-border: #2c2c42;
+    --color-text: #ececf6;
+    --color-muted: #a3a3bd;
+  }
+}
+
+/* Tailwind's dark: variant follows the same rule as the tokens above. */
+@custom-variant dark {
+  &:where([data-theme='dark'], [data-theme='dark'] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme='light']) *) {
+      @slot;
+    }
+  }
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  @apply bg-bg text-text font-sans antialiased;
+  min-height: 100dvh;
+}
+
+/* Clear keyboard focus everywhere (mouse clicks don't show it). */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+/* Set for a moment while the theme changes, so nothing fades between the old and new colours. */
+.theme-switching,
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
+}
